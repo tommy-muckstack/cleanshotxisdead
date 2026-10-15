@@ -1,0 +1,47 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { BP } from "@/lib/basepath";
+import { allItems, delItem, putItem } from "@/lib/shot/db";
+import { rid, fmtDuration } from "@/lib/shot/geometry";
+import { canvasToBlob, sampleScreenshot } from "@/lib/shot/render";
+import type { Item } from "@/lib/shot/types";
+type Cloud = { id: string; name: string; views: number; w: number; h: number; createdAt: number };
+const stamp = () => new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+export function Library({ userId }: { userId: string }) {
+  const [items, setItems] = useState<Item[] | null>(null); const [cloud, setCloud] = useState<Cloud[]>([]); const [err, setErr] = useState(""); const [rec, setRec] = useState<null | { start: number; now: number }>(null); const [play, setPlay] = useState<{ item: Item; url: string } | null>(null);
+  const router = useRouter(); const file = useRef<HTMLInputElement>(null); const recorder = useRef<{ mr: MediaRecorder; streams: MediaStream[]; chunks: Blob[]; mic: boolean } | null>(null); const [mic, setMic] = useState(false); const [over, setOver] = useState(false);
+  const urls = useRef<string[]>([]); const thumb = (b: Blob) => { const u = URL.createObjectURL(b); urls.current.push(u); return u; };
+  const load = useCallback(async () => { setItems(await allItems(userId)); const r = await fetch(`${BP}/api/shots`); if (r.ok) setCloud((await r.json()).shots); }, [userId]);
+  useEffect(() => { load(); return () => urls.current.forEach(URL.revokeObjectURL); }, [load]);
+  useEffect(() => { if (!rec) return; const t = setInterval(() => setRec(r => (r ? { ...r, now: Date.now() } : r)), 500); return () => clearInterval(t); }, [rec?.start]); // eslint-disable-line react-hooks/exhaustive-deps
+  const addImage = useCallback(async (blob: Blob, name = `Capture ${stamp()}`) => {
+    try { const bmp = await createImageBitmap(blob); const it: Item = { id: rid(), kind: "image", name, createdAt: Date.now(), w: bmp.width, h: bmp.height, blob }; bmp.close(); await putItem(userId, it); router.push(`/app/edit/${it.id}`); } catch { setErr("That file isn't an image we can open."); }
+  }, [userId, router]);
+  useEffect(() => { const onPaste = (e: ClipboardEvent) => { const f = [...(e.clipboardData?.files ?? [])].find(x => x.type.startsWith("image/")); if (f) { e.preventDefault(); addImage(f, `Pasted ${stamp()}`); } }; window.addEventListener("paste", onPaste); return () => window.removeEventListener("paste", onPaste); }, [addImage]);
+  const capture = async () => { setErr(""); try { const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }); const v = document.createElement("video"); v.srcObject = s; v.muted = true; await v.play(); await new Promise(r => setTimeout(r, 350)); const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext("2d")!.drawImage(v, 0, 0); s.getTracks().forEach(t => t.stop()); await addImage(await canvasToBlob(c), `Screenshot ${stamp()}`); } catch (e) { if ((e as Error).name !== "NotAllowedError") setErr("Screen capture isn't available in this browser."); } };
+  const startRec = async () => { setErr(""); try { const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }); const streams = [display]; const tracks = [...display.getTracks()]; if (mic) { try { const m = await navigator.mediaDevices.getUserMedia({ audio: true }); streams.push(m); tracks.push(...m.getAudioTracks()); } catch { setErr("Microphone unavailable; recording without it."); } }
+      const stream = new MediaStream(tracks); const type = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find(t => MediaRecorder.isTypeSupported(t)); const mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined); const chunks: Blob[] = []; const start = Date.now();
+      mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); }; mr.onstop = async () => { streams.forEach(s => s.getTracks().forEach(t => t.stop())); const st = display.getVideoTracks()[0]?.getSettings(); const blob = new Blob(chunks, { type: "video/webm" }); await putItem(userId, { id: rid(), kind: "video", name: `Recording ${stamp()}`, createdAt: Date.now(), w: st?.width ?? 0, h: st?.height ?? 0, blob, durationMs: Date.now() - start }); setRec(null); load(); };
+      display.getVideoTracks()[0]?.addEventListener("ended", () => mr.state !== "inactive" && mr.stop()); mr.start(1000); recorder.current = { mr, streams, chunks, mic }; setRec({ start, now: start }); } catch (e) { if ((e as Error).name !== "NotAllowedError") setErr("Screen recording isn't available in this browser."); } };
+  const stopRec = () => recorder.current?.mr.state !== "inactive" && recorder.current?.mr.stop();
+  const remove = async (it: Item) => { if (!confirm(`Delete “${it.name}”?`)) return; await delItem(userId, it.id); load(); };
+  const dl = (it: Item) => { const a = document.createElement("a"); a.href = URL.createObjectURL(it.blob); a.download = `${it.name.replace(/[^\w.-]+/g, "-")}.${it.kind === "video" ? "webm" : "png"}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+  const delCloud = async (c: Cloud) => { await fetch(`${BP}/api/shots/${c.id}`, { method: "DELETE" }); load(); };
+  return <main className="csl" onDragOver={e => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={e => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; if (f) addImage(f, f.name.replace(/\.[^.]+$/, "")); }}>
+    <div className="csl__head"><div><h1 className="ids-h1" style={{ fontSize: "var(--ids-type-3xl)" }}>Library</h1><p className="ids-muted" style={{ margin: 0 }}>Captures stay on this device. Share a link to upload one image.</p></div>
+      <div className="tb"><button className="ids-btn ids-btn--primary" onClick={capture}>Capture screen</button>
+        {rec ? <button className="ids-btn ids-btn--danger" onClick={stopRec} data-testid="stop-rec">■ Stop {fmtDuration(rec.now - rec.start)}</button> : <button className="ids-btn ids-btn--secondary" onClick={startRec}>● Record screen</button>}
+        <button className="ids-btn ids-btn--secondary" onClick={() => file.current?.click()}>Open image</button><button className="ids-btn ids-btn--secondary" onClick={async () => addImage(await canvasToBlob(sampleScreenshot()), "Sample screenshot")}>Try a sample</button>
+        <input ref={file} type="file" accept="image/*" hidden aria-label="Open image" onChange={e => { const f = e.target.files?.[0]; if (f) addImage(f, f.name.replace(/\.[^.]+$/, "")); }} /></div></div>
+    <label className="cse__row" style={{ marginBottom: 12 }}><input type="checkbox" checked={mic} onChange={e => setMic(e.target.checked)} /> Include microphone when recording</label>
+    {err && <p role="alert" className="cs-err">{err}</p>}{over && <div className="csl__drop">Drop an image to open it</div>}
+    {items?.length === 0 && <div className="ids-card" style={{ padding: 40, textAlign: "center" }} data-testid="empty"><h2>Capture something</h2><p className="ids-muted">Capture your screen, drop in an image, or paste one with Ctrl/⌘+V. Then annotate, blur, crop and beautify it.</p></div>}
+    <div className="csl__grid" data-testid="items">{items?.map(it => <div key={it.id} className="ids-card csl__card" data-kind={it.kind}>
+      <button className="csl__thumb" onClick={() => (it.kind === "image" ? router.push(`/app/edit/${it.id}`) : setPlay({ item: it, url: thumb(it.blob) }))} aria-label={`Open ${it.name}`}>{it.kind === "image" ? <img src={thumb(it.blob)} alt="" /> : <><video src={thumb(it.blob)} muted preload="metadata" /><span className="csl__badge">▶ {fmtDuration(it.durationMs ?? 0)}</span></>}</button>
+      <div className="csl__meta"><b title={it.name}>{it.name}</b><span className="ids-muted">{it.kind === "image" ? `${it.w}×${it.h}` : "Recording"}{it.cloudId ? " · shared" : ""}</span></div>
+      <div className="tb"><button className="iconbtn" onClick={() => dl(it)}>Download</button><button className="iconbtn" aria-label={`Delete ${it.name}`} onClick={() => remove(it)}>Delete</button></div></div>)}</div>
+    {cloud.length > 0 && <section style={{ marginTop: 32 }}><h2 style={{ fontSize: 18 }}>Shared links</h2><div className="ids-card" style={{ padding: 0, overflow: "hidden" }}><table className="cst" data-testid="cloud"><tbody>{cloud.map(c => <tr key={c.id}><td><a href={`${BP}/s/${c.id}`} target="_blank" rel="noreferrer">{c.name}</a></td><td className="ids-muted">{c.w}×{c.h}</td><td className="ids-muted">{c.views} views</td><td style={{ textAlign: "right" }}><button className="iconbtn" aria-label={`Delete link ${c.name}`} onClick={() => delCloud(c)}>Delete link</button></td></tr>)}</tbody></table></div></section>}
+    {play && <div className="tfd__modal" role="dialog" aria-label={play.item.name} onClick={e => { if (e.target === e.currentTarget) setPlay(null); }}><div className="ids-card" style={{ padding: 16, width: "min(900px,94vw)" }}><video src={play.url} controls autoPlay style={{ width: "100%", borderRadius: 8, background: "#000" }} /><div className="tb" style={{ marginTop: 10 }}><b style={{ flex: 1 }}>{play.item.name}</b><button className="iconbtn" onClick={() => dl(play.item)}>Download .webm</button><button className="iconbtn" onClick={() => setPlay(null)}>Close</button></div></div></div>}
+  </main>;
+}
