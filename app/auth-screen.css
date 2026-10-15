@@ -34,3 +34,26 @@
 .au-prov.primary{background:var(--au-cta);color:var(--au-ctafg);border-color:transparent}.au-prov.primary:hover:not(:disabled){background:var(--au-cta);filter:brightness(.92)}
 .au-fgt{float:right;font-weight:400;color:var(--au-accent);font-size:12px}.au-rem{display:flex;align-items:center;gap:8px;font-weight:400!important;margin:-4px 0 14px}.au-rem input{height:auto;margin:0}
 .au-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.au-alt{height:42px;border:1px solid #cfcfd6;border-radius:var(--au-r);background:#fff;font-weight:600;font-size:14px;font-family:inherit;cursor:pointer;color:var(--au-ink)}
+
+/* CleanShot Cloud login parity (1440) */
+.au--cs .au-body{grid-template-columns:50% 50%}
+.au--cs .au-art{display:block;padding:0;text-align:center;min-height:100vh}
+.au--cs .au-art>div:not(.au-brand):not(.au-artfoot){position:absolute;left:0;right:0;top:386px}
+.au--cs .au-brand{position:absolute;left:0;right:0;top:249px;display:flex;flex-direction:column;align-items:center;gap:15px}
+.au--cs .au-appicon{width:49px;height:49px;border-radius:12px;background:linear-gradient(135deg,#27c4ff,#1d6bff 60%,#1a3fd6);box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.au--cs .au-brand b{font-size:16px;line-height:20px;font-weight:600;letter-spacing:.01em}
+.au--cs .au-art h2{font-size:36px;line-height:43px;font-weight:600;letter-spacing:-.01em;margin:0 auto;max-width:320px}
+.au--cs .au-art p{font-size:14px;line-height:22px;opacity:.7;max-width:330px;margin:34px auto 0}
+.au--cs .au-artlink{position:absolute;left:0;right:0;top:588px;transform:translateY(-8px);color:#2b7fff;font-size:12px;font-weight:600;text-decoration:none}
+.au--cs .au-artfoot{position:absolute;left:104px;right:105px;bottom:20px;display:flex;justify-content:space-between;font-size:12px;color:#8b8d94}.au--cs .au-artfoot nav{display:flex;gap:30px}.au--cs .au-artfoot a{color:#8b8d94;text-decoration:none}
+.au--cs .au-main{padding:0;align-items:flex-start;justify-content:center;background:#fff}
+.au--cs .au-form{width:401px;padding-top:257px}
+.au--cs .au-form label{font-size:12px;line-height:14px;font-weight:700;margin-bottom:13px;color:#111}
+.au--cs .au-form input:not([type=checkbox]){height:47px;border:1px solid #dcdee4;border-radius:6px;padding:0 12px;font-size:13px;margin-bottom:36px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.au--cs .au-form input::placeholder{color:#b3b5bd}
+.au--cs .au-form input:focus{outline:0;border-color:#2b7fff;box-shadow:0 0 0 3px rgba(43,127,255,.25)}
+.au--cs .au-fgt{font-size:12px;font-weight:700;color:#2b7fff;text-decoration:none}
+.au--cs .au-form label.au-rem{margin:-2px 0 58px;font-size:13px;font-weight:400!important;gap:8px;line-height:16px;color:#222}.au--cs .au-rem input{width:16px;height:16px;border:1px solid #cfd1d8;border-radius:4px;appearance:none;background:#fff;margin:0;padding:0;box-shadow:none}.au--cs .au-rem input:checked{background:#2b7fff;border-color:#2b7fff}
+.au--cs .au-two{gap:7px}.au--cs .au-alt,.au--cs .au-cta{height:47px;border-radius:6px;font-size:13px;font-weight:700}.au--cs .au-alt{border:1px solid #dcdee4;color:#111}.au--cs .au-cta{background:#2b7fff}
+.au--cs .au-sso{margin:24px 0 0;font-size:12px;font-weight:700;display:flex;justify-content:center;align-items:center;gap:14px}.au--cs .au-sso a{color:#2b7fff;text-decoration:none;display:inline-flex;gap:4px;align-items:center}.au--cs .au-sso i{color:#555;font-style:normal}
+@media (max-width:860px){.au--cs .au-body{grid-template-columns:1fr}.au--cs .au-art{display:none}.au--cs .au-form{width:100%;max-width:401px;padding:60px 24px}}
