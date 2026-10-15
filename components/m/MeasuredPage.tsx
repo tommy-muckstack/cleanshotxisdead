@@ -25,7 +25,7 @@ export function MeasuredPage({ data, className = "", skip, img, display, bgFallb
       if (it.k === "img" && img) { const r = img(it, pos); if (r) return <div key={i} style={{ position: "absolute", ...pos }}>{r}</div>; }
       if (it.k === "img") return it.w <= 20 ? <div key={i} className="mp-i" style={pos} dangerouslySetInnerHTML={{ __html: CHECK }} /> : <div key={i} className="mp-ph" style={{ ...pos, background: it.wash, borderRadius: it.r || (it.w < 130 ? "16px" : "12px") }}>{it.mesh && it.w >= 90 && <Mesh m={it.mesh} w={it.w} h={it.h} />}</div>;
       const style = { left: it.x, top: it.y, minWidth: it.w, height: it.h, zIndex: it.z ?? 3, fontSize: it.fs, lineHeight: it.lh, fontWeight: it.fw, color: it.c, letterSpacing: it.ls, textDecoration: it.td, fontStyle: it.fi ? "italic" : undefined, fontFamily: display && it.ff && display.test(it.ff) ? "var(--ids-font-display)" : undefined } as React.CSSProperties;
-      return it.href ? <Link key={i} href={CTA.test(it.t || "") ? "/login" : "/"} className="mp-t" data-w={it.w} style={style}>{it.t}</Link> : <span key={i} className="mp-t" data-w={it.w} style={style}>{it.t}</span>;
+      return it.href ? <Link key={i} href={CTA.test(it.t || "") ? "/download" : "/"} className="mp-t" data-w={it.w} style={style}>{it.t}</Link> : <span key={i} className="mp-t" data-w={it.w} style={style}>{it.t}</span>;
     })}
   </div>;
 }

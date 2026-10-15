@@ -22,7 +22,7 @@ export function Marketing() {
       <div key={s.t} className="ids-card mk-step"><span className="ids-pill">{i + 1}</span><h3 className="ids-h3" style={{ margin: "16px 0 8px" }}>{s.t}</h3><p className="ids-muted" style={{ margin: 0 }}>{s.d}</p></div>)}</div></Section>
     {site.rows.map((r, i) => <Section key={r.id} id={r.id} style={{ paddingTop: 48, paddingBottom: 48 }}>
       <div className={"mk-row" + (i % 2 ? " mk-row--flip" : "")}>
-        <div><span className="ids-pill">{r.k}</span><h2 className="ids-h2 mk-row__h">{r.h}</h2><p className="ids-muted mk-lede">{r.p}</p><Link className="ids-btn ids-btn--outline" href="/login" style={{ marginTop: 12 }}>{r.cta}</Link></div>
+        <div><span className="ids-pill">{r.k}</span><h2 className="ids-h2 mk-row__h">{r.h}</h2><p className="ids-muted mk-lede">{r.p}</p><Link className="ids-btn ids-btn--outline" href="/download" style={{ marginTop: 12 }}>{r.cta}</Link></div>
         <div><Shot src={r.img} alt={r.alt} /></div></div></Section>)}
     <Section id="resources" title={site.statsTitle}><div className="mk-stats">{site.stats.map(s => <div key={s.b} className="ids-card"><b>{s.b}</b><span className="ids-muted">{s.s}</span></div>)}</div></Section>
     <Section title={site.integrations.title} subtitle={site.integrations.text} />
@@ -35,7 +35,7 @@ export function Marketing() {
           <tbody>{site.pricing.features.map(f => <tr key={f.name}><td>{f.name}</td><td className="ids-muted">{f.plan}</td><td className="mk-yes">✓ Free</td></tr>)}</tbody></table></div>
     </Section>
     <section className="mk-final"><h2 className="ids-h1" style={{ fontSize: "var(--ids-type-3xl)" }}>{site.finalCta.title}</h2><p className="ids-muted mk-lede" style={{ margin: "12px auto 0" }}>{site.finalCta.sub}</p>
-      <div className="mk-actions" style={{ justifyContent: "center", marginTop: 28 }}><Link className="ids-btn ids-btn--primary" href="/login">{site.cta}</Link><a className="ids-btn ids-btn--outline" href={site.repo}>View on GitHub</a></div></section>
+      <div className="mk-actions" style={{ justifyContent: "center", marginTop: 28 }}><Link className="ids-btn ids-btn--primary" href="/download">{site.cta}</Link><a className="ids-btn ids-btn--outline" href={site.repo}>View on GitHub</a></div></section>
     <Footer columns={site.footer} note={site.trademark} />
   </div>;
 }

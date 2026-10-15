@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("next") || "/app";
   const next = /^\/(?!\/)[\w\-./?=&%]*$/.test(raw) ? raw : "/app";
   const go = (path: string) => new NextResponse(null, { status: 307, headers: { Location: BP + path } });
-  if (!guestEnabled()) return go("/login?callbackUrl=" + encodeURIComponent(next));
+  if (!guestEnabled()) return go("/");
   const res = go(next);
   if (!(await currentUser())) res.cookies.set(GUEST_COOKIE, signGuest(newGuestId()), cookieOptions(GUEST_MAX_AGE_S));
   return res;
