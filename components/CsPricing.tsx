@@ -2,6 +2,8 @@ import Link from "next/link";
 import "./cshome.css";
 import "./cspricing.css";
 import { CsNav, CsDark, CsMark } from "./CsHome";
+import { MeasuredPage } from "./m/MeasuredPage";
+import pm from "./m/pricing390.json";
 
 const Ic = () => <i className="ic" />;
 const MAC: [string, string, string][] = [["Screenshots & screen recording", "✓", "✓"], ["Video Editor with smart zooms", "✓", "✓"], ["Annotation tools", "✓", "✓"], ["All app features included", "✓", "✓"]];
@@ -10,7 +12,7 @@ const FAQ = ["Is the Cloud account required to use the app?", "What are the syst
 const Row = ({ r, y }: { r: [string, string, string]; y: number }) => <div className="rw" style={{ top: y }}><span>{r[0]}</span><b className={r[1] === "–" ? "d" : ""}>{r[1] === "✓" ? <u>✓</u> : r[1]}</b><b className={r[2] === "–" ? "d" : ""}>{r[2] === "✓" ? <u>✓</u> : r[2]}</b></div>;
 
 export function CsPricing() {
-  return <div className="cs-home cs-pr">
+  return <><MeasuredPage data={pm as never} className="cs-pm" img={(it) => it.y < 60 && it.w > 100 ? <span style={{ display: "flex", alignItems: "center", gap: 10, height: it.h }}><CsMark s={32} /><b style={{ fontSize: 19, letterSpacing: "-.01em", color: "#121317" }}>CleanShot</b></span> : it.w >= 300 ? <div style={{ width: "100%", height: "100%", borderRadius: 20, background: it.y < 4000 ? "linear-gradient(135deg,#fde3dc,#fbc9c4 55%,#fcd9c8)" : it.y < 4300 ? "linear-gradient(135deg,#e6efff,#cfe0fd 60%,#a8c6fb)" : "linear-gradient(135deg,#f9e8f1,#f8d0e4 70%,#f6bfd9)" }} /> : it.w === 70 || it.w === 44 ? <div style={{ width: it.w, height: it.h, borderRadius: 16, background: it.y < 4000 ? "linear-gradient(135deg,#ffb12e,#ff5a64)" : it.y < 4300 ? "#2f5bff" : "transparent" }}>{it.y > 4300 ? <svg viewBox="0 0 44 70" width="44" height="70"><g fill="#ff3fd0"><rect x="14" y="2" width="16" height="16" rx="3" transform="rotate(45 22 10)" /><rect x="3" y="21" width="16" height="16" rx="3" transform="rotate(45 11 29)" /><rect x="25" y="21" width="16" height="16" rx="3" transform="rotate(45 33 29)" /><rect x="14" y="40" width="16" height="16" rx="3" transform="rotate(45 22 48)" /></g></svg> : null}</div> : it.w === 122 ? <div style={{ width: 122, height: 40, borderRadius: 8, background: "#000", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15 }}>Setapp</div> : it.w === 112 ? <CsMark s={112} /> : it.w > 20 && it.w <= 26 ? <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="#1750f2" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5" /><path d="M8 12h8M12 8v8" /></svg> : it.w < 20 ? <svg viewBox="0 0 16 16" width="100%" height="100%" fill="none" stroke="#6b6e76" strokeWidth="1.3" strokeLinecap="round"><rect x="2" y="5" width="12" height="7" rx="2" /><path d="M5 9h.01" /></svg> : null} /><div className="cs-home cs-pr mp-desk">
     <CsNav />
     <h1 className="ph">Choose your <span>setup</span></h1>
     <p className="ps">Both plans include the full Mac app.<br />Pro adds unlimited Cloud storage, custom branding, and team features.</p>
@@ -38,5 +40,5 @@ export function CsPricing() {
     <h2 className="hd" style={{ top: 3382 }}>FAQ</h2><p className="fh" style={{ top: 3440 }}>Didn&apos;t find your answer?<br /><span>Reach out to us at support@example.com</span></p>
     {FAQ.map((q, i) => <div key={q} className="fq" style={{ top: 3388 + i * 71.1 }}>{q}<svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 5l4 4 4-4" fill="none" stroke="#121317" strokeWidth="1.5" /></svg></div>)}
     <CsDark top={4226} />
-  </div>;
+  </div></>;
 }
