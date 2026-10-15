@@ -3,13 +3,13 @@ import ServiceManagement
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, shortcuts, quickAccess, recording, screenshots, annotate, cloud, advanced, about
+    case general, wallpaper, shortcuts, quickAccess, recording, screenshots, annotate, cloud, advanced, about
     var id: String { rawValue }
     var title: String {
-        switch self { case .general: "General"; case .shortcuts: "Shortcuts"; case .quickAccess: "Quick Access"; case .recording: "Recording"; case .screenshots: "Screenshots"; case .annotate: "Annotate"; case .cloud: "Cloud"; case .advanced: "Advanced"; case .about: "About" }
+        switch self { case .general: "General"; case .wallpaper: "Wallpaper"; case .shortcuts: "Shortcuts"; case .quickAccess: "Quick Access"; case .recording: "Recording"; case .screenshots: "Screenshots"; case .annotate: "Annotate"; case .cloud: "Cloud"; case .advanced: "Advanced"; case .about: "About" }
     }
     var symbol: String {
-        switch self { case .general: "gearshape.fill"; case .shortcuts: "command.square.fill"; case .quickAccess: "rectangle.on.rectangle.angled"; case .recording: "video.fill"; case .screenshots: "camera.fill"; case .annotate: "pencil.and.outline"; case .cloud: "cloud.fill"; case .advanced: "wrench.and.screwdriver.fill"; case .about: "info.circle.fill" }
+        switch self { case .general: "gearshape.fill"; case .wallpaper: "photo.fill"; case .shortcuts: "command.square.fill"; case .quickAccess: "rectangle.on.rectangle.angled"; case .recording: "video.fill"; case .screenshots: "camera.fill"; case .annotate: "pencil.and.outline"; case .cloud: "cloud.fill"; case .advanced: "wrench.and.screwdriver.fill"; case .about: "info.circle.fill" }
     }
 }
 
@@ -59,7 +59,7 @@ struct SettingsView: View {
                         Text(t.title).font(.system(size: 11))
                     }
                     .foregroundStyle(tabs.tab == t ? MM.Colors.accent : Color.white.opacity(0.7))
-                    .frame(width: 64, height: 54)
+                    .frame(width: 60, height: 54)
                     .background(RoundedRectangle(cornerRadius: 7).fill(tabs.tab == t ? Color.white.opacity(0.08) : .clear))
                 }.buttonStyle(.plain)
             }
@@ -71,9 +71,10 @@ struct SettingsView: View {
     @ViewBuilder private var pane: some View {
         switch tabs.tab {
         case .general: general
+        case .wallpaper: WallpaperPane()
         case .shortcuts: ShortcutsPane()
         case .quickAccess: quickAccess
-        case .recording: recording
+        case .recording: RecordingPane()
         case .screenshots: screenshots
         case .annotate: annotate
         case .cloud: cloud
@@ -156,20 +157,6 @@ struct SettingsView: View {
                 LabeledContent("Drag & drop:") { Toggle("Close after dragging", isOn: $s.overlayCloseAfterDrag) }
                 LabeledContent("Cloud upload:") { Toggle("Close after uploading", isOn: $s.overlayCloseAfterUpload) }
                 LabeledContent("Save button behavior:") { VStack(alignment: .leading) { Text("Save to \"Export location\""); Text("Press with ⌥ (option) to choose the destination.").foregroundStyle(.secondary) } }
-            }
-        }.formStyle(.columns).padding(.horizontal, 36)
-    }
-
-    private var recording: some View {
-        Form {
-            Section {
-                LabeledContent("Controls:") { Toggle("Show controls while recording", isOn: $s.showRecordingControls) }
-                LabeledContent("Menu bar:") { Toggle("Display recording time", isOn: $s.menuBarRecordingTime) }
-                LabeledContent("Retina:") { Toggle("Scale Retina videos to 1x", isOn: $s.scaleRetinaVideos) }
-                LabeledContent("Cursor:") { Toggle("Show cursor", isOn: $s.showCursorInRecordings) }
-                LabeledContent("Audio:") { VStack(alignment: .leading) { Toggle("Record microphone", isOn: $s.recordMicrophone); Toggle("Record computer audio", isOn: $s.recordComputerAudio) } }
-                LabeledContent("Recording area:") { VStack(alignment: .leading) { Toggle("Remember last selection", isOn: $s.rememberLastSelection); Toggle("Show countdown", isOn: $s.showCountdown) } }
-                LabeledContent("Format:") { Text("MP4 (H.264), 60 fps").foregroundStyle(.secondary) }
             }
         }.formStyle(.columns).padding(.horizontal, 36)
     }
@@ -295,5 +282,84 @@ struct AboutPane: View {
             }.padding(.top, 4)
             Text("Not affiliated with CleanShot X. CleanShot X is a trademark of its owner. Apache-2.0.").font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 20)
         }.padding(30)
+    }
+}
+
+
+struct WallpaperPane: View {
+    @ObservedObject var s = SettingsStore.shared
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Choose a wallpaper to display when desktop icons are hidden:").foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 12) {
+                radio("Desktop wallpaper", "desktop")
+                HStack(spacing: 10) { radio("Custom wallpaper:", "custom"); Button(s.wallpaperImagePath.isEmpty ? "Choose…" : (s.wallpaperImagePath as NSString).lastPathComponent) { chooseImage() }.frame(width: 300, alignment: .leading) }
+                HStack(spacing: 10) { radio("Plain color:", "plain"); ColorPicker("", selection: Binding(get: { Color(nsColor: NSColor(hex: s.wallpaperColorHex) ?? .darkGray) }, set: { s.wallpaperColorHex = NSColor($0).hexString })).labelsHidden() }
+            }.padding(.leading, 8)
+            Divider().padding(.vertical, 6)
+            HStack(alignment: .top, spacing: 30) {
+                VStack(alignment: .leading, spacing: 6) { Text("Window screenshots:").font(.system(size: 14, weight: .semibold)); Text("Hold ⇧ Shift while taking a screenshot to get a transparent background.").foregroundStyle(.secondary).frame(width: 230, alignment: .leading) }
+                HStack(spacing: 40) {
+                    styleTile("With wallpaper", "wallpaper", wallpaper: true)
+                    styleTile("Transparent", "transparent", wallpaper: false)
+                }
+            }
+            HStack { Text("Padding:").frame(width: 100, alignment: .leading); VStack(spacing: 2) { Slider(value: $s.windowPadding, in: 0...1, step: 0.25); HStack { Text("Min"); Spacer(); Text("Default"); Spacer(); Text("Max") }.font(.system(size: 11)).foregroundStyle(.secondary) }.frame(width: 420) }
+            HStack(alignment: .top) { Text("Shadow:").frame(width: 100, alignment: .leading); VStack(alignment: .leading) { Toggle("Capture window shadow", isOn: $s.captureWindowShadow); Text("Hold ⌥ (option) while taking a screenshot to disable shadow.").foregroundStyle(.secondary) } }
+        }.padding(.horizontal, 36)
+        .onChange(of: s.wallpaperMode) { DesktopCover.apply() }
+    }
+    private func radio(_ title: String, _ value: String) -> some View {
+        Button { s.wallpaperMode = value } label: { HStack(spacing: 8) { Image(systemName: s.wallpaperMode == value ? "largecircle.fill.circle" : "circle").foregroundStyle(s.wallpaperMode == value ? MM.Colors.accent : .secondary); Text(title) } }.buttonStyle(.plain)
+    }
+    private func styleTile(_ title: String, _ value: String, wallpaper: Bool) -> some View {
+        Button { s.windowScreenshotStyle = value } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    if wallpaper { LinearGradient(colors: [.orange, .pink, .purple], startPoint: .topLeading, endPoint: .bottomTrailing) } else { Checker() }
+                    RoundedRectangle(cornerRadius: 6).fill(Color.white).frame(width: 70, height: 48).overlay(alignment: .topLeading) { HStack(spacing: 3) { Circle().fill(.red); Circle().fill(.yellow); Circle().fill(.green) }.frame(height: 6).padding(5) }
+                }.frame(width: 120, height: 90).clipShape(RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(s.windowScreenshotStyle == value ? MM.Colors.accent : .clear, lineWidth: 3))
+                Text(title).foregroundStyle(s.windowScreenshotStyle == value ? .primary : .secondary)
+            }
+        }.buttonStyle(.plain)
+    }
+    private func chooseImage() {
+        let p = NSOpenPanel(); p.allowedContentTypes = [.image]; if p.runModal() == .OK, let u = p.url { s.wallpaperImagePath = u.path; s.wallpaperMode = "custom" }
+    }
+    private struct Checker: View { var body: some View { Canvas { ctx, size in for y in stride(from: 0, to: size.height, by: 10) { for x in stride(from: 0, to: size.width, by: 10) { ctx.fill(Path(CGRect(x: x, y: y, width: 10, height: 10)), with: .color(((Int(x / 10) + Int(y / 10)) % 2 == 0) ? Color.gray.opacity(0.5) : Color.gray.opacity(0.25))) } } } } }
+}
+
+struct RecordingPane: View {
+    @ObservedObject var s = SettingsStore.shared
+    @State private var tab = "General"
+    var body: some View {
+        VStack(spacing: 16) {
+            Picker("", selection: $tab) { Text("General").tag("General"); Text("Video").tag("Video"); Text("GIF").tag("GIF") }.pickerStyle(.segmented).labelsHidden().frame(width: 260)
+            Group {
+                if tab == "General" {
+                    Form {
+                        LabeledContent("Controls:") { Toggle("Show controls while recording", isOn: $s.showRecordingControls) }
+                        LabeledContent("Menu bar:") { Toggle("Display recording time", isOn: $s.menuBarRecordingTime) }
+                        LabeledContent("Retina:") { Toggle("Scale Retina videos to 1x", isOn: $s.scaleRetinaVideos) }
+                        LabeledContent("Cursor:") { VStack(alignment: .leading) { Toggle("Show cursor", isOn: $s.showCursorInRecordings); Toggle("Highlight clicks", isOn: $s.cursorEffects) } }
+                        LabeledContent("Keyboard:") { VStack(alignment: .leading) { Toggle("Show keystrokes", isOn: $s.showKeystrokes).onChange(of: s.showKeystrokes) { if s.showKeystrokes, !KeystrokeOverlay.accessibilityGranted { KeystrokeOverlay.requestAccessibility() } }; if s.showKeystrokes, !KeystrokeOverlay.accessibilityGranted { Text("Needs Accessibility access (System Settings → Privacy & Security).").foregroundStyle(.secondary) } } }
+                        LabeledContent("Audio:") { VStack(alignment: .leading) { Toggle("Record microphone", isOn: $s.recordMicrophone); Toggle("Record computer audio", isOn: $s.recordComputerAudio) } }
+                        LabeledContent("Recording area:") { VStack(alignment: .leading) { Toggle("Remember last selection", isOn: $s.rememberLastSelection); Toggle("Show countdown", isOn: $s.showCountdown) } }
+                    }
+                } else if tab == "Video" {
+                    Form {
+                        LabeledContent("Max resolution:") { VStack(alignment: .leading) { Picker("", selection: $s.videoQuality) { Text("Original").tag("High"); Text("1080p").tag("1080p"); Text("720p").tag("720p") }.labelsHidden().frame(width: 140); Text("Set maximum resolution to reduce file size and upload time.").foregroundStyle(.secondary) } }
+                        LabeledContent("Video FPS:") { Picker("", selection: $s.videoFPS) { ForEach([24, 30, 60], id: \.self) { Text("\($0)").tag($0) } }.labelsHidden().frame(width: 90) }
+                        LabeledContent("Format:") { Text("MP4 (H.264)").foregroundStyle(.secondary) }
+                    }
+                } else {
+                    Form {
+                        LabeledContent("GIF FPS:") { HStack { Text("\(s.gifFPS)").frame(width: 40).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 6).fill(.black.opacity(0.4))); Slider(value: Binding(get: { Double(s.gifFPS) }, set: { s.gifFPS = Int($0) }), in: 5...30, step: 1).frame(width: 260) } }
+                        LabeledContent("GIF quality:") { VStack(alignment: .leading) { HStack { Slider(value: $s.gifQuality, in: 0...1, step: 0.1).frame(width: 200); Toggle("Optimize GIFs", isOn: $s.gifLoop) }; HStack { Text("Low"); Spacer(); Text("High") }.font(.system(size: 11)).foregroundStyle(.secondary).frame(width: 200); Text("Setting the quality to maximum can speed up the processing time, but it will increase file size.").foregroundStyle(.secondary).frame(width: 340, alignment: .leading) } }
+                        LabeledContent("GIF size:") { VStack(alignment: .leading) { Picker("", selection: $s.gifMaxWidth) { Text("480 x auto").tag(480); Text("640 x auto").tag(640); Text("800 x auto (default)").tag(800); Text("1280 x auto").tag(1280); Text("Original").tag(100000) }.labelsHidden().frame(width: 220); Text("Set maximum resolution of your GIFs. The GIF is only downscaled if needed.").foregroundStyle(.secondary).frame(width: 340, alignment: .leading) } }
+                    }
+                }
+            }.formStyle(.columns).padding(.horizontal, 36)
+        }
     }
 }

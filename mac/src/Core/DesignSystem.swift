@@ -60,7 +60,3 @@ extension View {
     }
 }
 
-enum Analytics {
-    /// No product analytics in the Mac app. Kept so ported code reads unchanged.
-    static func track(_ event: String, _ properties: [String: Any] = [:]) {}
-}

@@ -40,7 +40,7 @@ final class EditorWindowController {
         window.center()
         windows.append(window)
 
-        Analytics.track("editor_opened")
+        Analytics.track("app_editor_opened")
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }

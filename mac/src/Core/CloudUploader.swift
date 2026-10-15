@@ -16,6 +16,7 @@ final class CloudUploader {
             let link = try await post(entry)
             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(link, forType: .string)
             var updated = entry; updated.cloudURL = link; HistoryStore.shared.update(updated)
+            Analytics.track("app_shared", ["channel": "cloud"])
             Toast.show("Link copied to clipboard", systemImage: "link", actionLabel: "Open", action: { if let u = URL(string: link) { NSWorkspace.shared.open(u) } })
         } catch { Toast.show("Upload failed: \(error.localizedDescription)", systemImage: "exclamationmark.triangle") }
     }

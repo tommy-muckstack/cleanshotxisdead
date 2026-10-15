@@ -6,11 +6,12 @@ Free. No account, no license, no subscription.
 
 ## Mac app (the real thing)
 
-`mac/` is a native macOS menu-bar app (Swift, macOS 14.2+) that looks and feels like CleanShot X: All-In-One / Area / Fullscreen / Window / Self-Timer / OCR capture, screen recording to MP4, the Quick Access Overlay, an annotation editor (arrows, shapes, text, counter, pixelate, highlight, crop, backgrounds, background removal), pin-to-screen, Capture History, Settings panes mirroring CleanShot X's, global shortcuts, and cloud links (uploads go to this web app as a guest; nothing to sign up for).
+`mac/` is a native macOS menu-bar app (Swift, macOS 14.2+) that looks and feels like CleanShot X: All-In-One / Area / Fullscreen / Window / Scrolling (with auto-scroll) / Self-Timer / OCR capture, screen recording to MP4 or GIF with click highlights and a keystroke overlay, window screenshots with wallpaper or transparent background, the Wallpaper pane (custom image / plain colour while desktop icons are hidden), the Quick Access Overlay, an annotation editor (arrows, shapes, text, counter, pixelate, highlight, crop, backgrounds, background removal), pin-to-screen, Capture History, Settings panes mirroring CleanShot X's, global shortcuts, and cloud links (uploads go to this web app as a guest; nothing to sign up for).
 
 - **Download:** <https://yourappisdead.com/cleanshotxisdead/download> (latest signed + notarized DMG from GitHub Releases). Drag to Applications, grant Screen Recording when asked.
 - **Run from source:** `cd mac && ./scripts/run-dev.sh` (builds, assembles a signed .app, launches). `swift build` / `swift test` for plain builds.
 - **Release:** `cd mac && RELEASE_VERSION=x.y.z RELEASE_BUILD=n ./scripts/build-direct.sh` — universal build, Developer ID + hardened runtime, notarize + staple, DMG, Sparkle EdDSA signature + appcast, upload, GitHub release.
+- Anonymous usage analytics go to the shared IsDead PostHog project (taxonomy in the hub repo's `ANALYTICS.md`); nothing is sent from dev builds.
 - Capture engine, selection overlay and editor are ported from [My Man](https://github.com/tommy-muckstack/myman) (Apache-2.0). All UI art is original.
 
 ## Web app

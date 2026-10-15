@@ -31,6 +31,21 @@ final class SettingsStore: ObservableObject {
     @Published var overlayAutoCloseSeconds: Int { didSet { d.set(overlayAutoCloseSeconds, forKey: "overlayAutoCloseSeconds") } }
     @Published var overlayCloseAfterDrag: Bool { didSet { d.set(overlayCloseAfterDrag, forKey: "overlayCloseAfterDrag") } }
     @Published var overlayCloseAfterUpload: Bool { didSet { d.set(overlayCloseAfterUpload, forKey: "overlayCloseAfterUpload") } }
+    // Wallpaper
+    @Published var wallpaperMode: String { didSet { d.set(wallpaperMode, forKey: "wallpaperMode") } } // desktop / custom / plain
+    @Published var wallpaperImagePath: String { didSet { d.set(wallpaperImagePath, forKey: "wallpaperImagePath") } }
+    @Published var wallpaperColorHex: String { didSet { d.set(wallpaperColorHex, forKey: "wallpaperColorHex") } }
+    @Published var windowScreenshotStyle: String { didSet { d.set(windowScreenshotStyle, forKey: "windowScreenshotStyle") } } // wallpaper / transparent
+    @Published var windowPadding: Double { didSet { d.set(windowPadding, forKey: "windowPadding") } } // 0…1
+    @Published var captureWindowShadow: Bool { didSet { d.set(captureWindowShadow, forKey: "captureWindowShadow") } }
+    // GIF
+    @Published var gifFPS: Int { didSet { d.set(gifFPS, forKey: "gifFPS") } }
+    @Published var gifScale: Double { didSet { d.set(gifScale, forKey: "gifScale") } } // 0.25…1
+    @Published var gifLoop: Bool { didSet { d.set(gifLoop, forKey: "gifLoop") } }
+    @Published var gifQuality: Double { didSet { d.set(gifQuality, forKey: "gifQuality") } }
+    @Published var gifMaxWidth: Int { didSet { d.set(gifMaxWidth, forKey: "gifMaxWidth") } }
+    @Published var videoFPS: Int { didSet { d.set(videoFPS, forKey: "videoFPS") } }
+    @Published var videoQuality: String { didSet { d.set(videoQuality, forKey: "videoQuality") } }
     // Screenshots
     @Published var fileFormat: String { didSet { d.set(fileFormat, forKey: "fileFormat") } } // PNG / JPG
     @Published var scaleRetinaTo1x: Bool { didSet { d.set(scaleRetinaTo1x, forKey: "scaleRetinaTo1x") } }
@@ -93,6 +108,9 @@ final class SettingsStore: ObservableObject {
         overlaySize = d.object(forKey: "overlaySize") == nil ? 0.5 : d.double(forKey: "overlaySize")
         overlayAutoClose = b("overlayAutoClose", true); overlayAutoCloseAction = s("overlayAutoCloseAction", "Save and Close"); overlayAutoCloseSeconds = i("overlayAutoCloseSeconds", 10)
         overlayCloseAfterDrag = b("overlayCloseAfterDrag", true); overlayCloseAfterUpload = b("overlayCloseAfterUpload", true)
+        wallpaperMode = s("wallpaperMode", "desktop"); wallpaperImagePath = s("wallpaperImagePath", ""); wallpaperColorHex = s("wallpaperColorHex", "#2B2D33")
+        windowScreenshotStyle = s("windowScreenshotStyle", "wallpaper"); windowPadding = d.object(forKey: "windowPadding") == nil ? 0.33 : d.double(forKey: "windowPadding"); captureWindowShadow = b("captureWindowShadow", true)
+        gifFPS = i("gifFPS", 15); gifScale = d.object(forKey: "gifScale") == nil ? 1 : d.double(forKey: "gifScale"); gifLoop = b("gifLoop", true); gifQuality = d.object(forKey: "gifQuality") == nil ? 0.8 : d.double(forKey: "gifQuality"); gifMaxWidth = i("gifMaxWidth", 800); videoFPS = i("videoFPS", 60); videoQuality = s("videoQuality", "High")
         fileFormat = s("fileFormat", "PNG"); scaleRetinaTo1x = b("scaleRetinaTo1x", false); convertToSRGB = b("convertToSRGB", false); addBorder = b("addBorder", false)
         selfTimerSeconds = i("selfTimerSeconds", 5); showCursorOnScreenshots = b("showCursorOnScreenshots", false); freezeScreen = b("freezeScreen", true)
         crosshairMode = s("crosshairMode", "Disabled"); showMagnifier = b("showMagnifier", true)

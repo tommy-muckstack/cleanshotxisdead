@@ -52,7 +52,7 @@ struct HotkeyCombo: Codable, Equatable {
 
 enum HotkeyAction: String, CaseIterable, Identifiable {
     case allInOne, toggleDesktopIcons, openHistory, restoreLastCapture
-    case captureArea, capturePreviousArea, captureFullscreen, captureWindow, selfTimer, captureAreaCopy, captureAreaSave, captureAreaUpload, captureAreaAnnotate, captureAreaPin
+    case captureArea, capturePreviousArea, captureFullscreen, captureWindow, scrollingCapture, selfTimer, captureAreaCopy, captureAreaSave, captureAreaUpload, captureAreaAnnotate, captureAreaPin
     case captureText, recordScreen, openAnnotate, openFromClipboard, pinLast, annotateLast
     var id: String { rawValue }
     var section: String {
@@ -67,7 +67,7 @@ enum HotkeyAction: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .allInOne: "All-In-One"; case .toggleDesktopIcons: "Toggle Desktop Icons"; case .openHistory: "Open Capture History"; case .restoreLastCapture: "Restore Last Capture"
-        case .captureArea: "Capture Area"; case .capturePreviousArea: "Capture Previous Area"; case .captureFullscreen: "Capture Fullscreen"; case .captureWindow: "Capture Window"
+        case .captureArea: "Capture Area"; case .capturePreviousArea: "Capture Previous Area"; case .scrollingCapture: "Scrolling Capture"; case .captureFullscreen: "Capture Fullscreen"; case .captureWindow: "Capture Window"
         case .selfTimer: "Self-Timer"; case .captureAreaCopy: "Capture Area & Copy to Clipboard"; case .captureAreaSave: "Capture Area & Save"; case .captureAreaUpload: "Capture Area & Upload to Cloud"
         case .captureAreaAnnotate: "Capture Area & Annotate"; case .captureAreaPin: "Capture Area & Pin to the Screen"; case .captureText: "Capture Text"; case .recordScreen: "Record Screen / Stop Recording"
         case .openAnnotate: "Open Annotate tool"; case .openFromClipboard: "Open from Clipboard"; case .pinLast: "Pin Last Screenshot"; case .annotateLast: "Annotate Last Screenshot"
