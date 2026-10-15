@@ -1,5 +1,7 @@
 import Link from "next/link";
 import "./cshome.css";
+import { MeasuredPage } from "./m/MeasuredPage";
+import hm from "./m/home390.json";
 
 export const CsMark = ({ s = 30 }: { s?: number }) => <span className="cs-mark" style={{ width: s, height: s }}><svg width={s * .6} height={s * .6} viewBox="0 0 24 24" aria-hidden><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /><circle cx="12" cy="12" r="3" fill="#fff" /></svg></span>;
 export function CsNav() {
@@ -39,7 +41,8 @@ const Feat = ({ x, y, t, p, items, btn, k = "" }: { x: number; y: number; t: str
   <div className={"ft " + k} style={{ left: x, top: y }}><h2>{t}</h2><p>{p}</p>{items?.map((i) => <div key={i} className="it"><i />{i}</div>)}{btn && <a className="ob">{btn}</a>}</div>;
 
 export function CsHome() {
-  return <div className="cs-home">
+  return <><MeasuredPage data={hm as never} className="cs-hm" img={(it) => it.y < 60 && it.w > 100 ? <span style={{ display: "flex", alignItems: "center", gap: 10, height: it.h }}><CsMark s={32} /><b style={{ fontSize: 19, letterSpacing: "-.01em", color: "#121317" }}>CleanShot</b></span> : null} />
+  <div className="cs-home mp-desk">
     <CsNav />
     <a className="intro">▷ Introducing Studio Mode</a>
     <h1 className="h1"><span>There are average capture apps.</span><br /><span>And there&apos;s CleanShot.</span></h1>
@@ -92,5 +95,5 @@ export function CsHome() {
     <div className="tws" style={{ top: 9752 }}>{[["Steven Tey, Dub.co", "We've been long-time users of CleanShot at Dub! I literally cannot live without it anymore - every time I get a new Mac, CleanShot is the first app I install"], ["John O'Nolan, Ghost.org", "An absolutely essential tool for remote companies, where high quality annotated screenshots and recordings make up an enormous amount of team communication. I couldn't live without it."], ["Thomas Paul Mann, Raycast", "CleanShot lets me turn what's on my screen into something worth sharing. It's quick, polished and incredibly quick, and seamlessly"]].map(([n, t], i) => <div key={n} className="tw" style={{ left: 135 + i * 503 }}><i /><b>{n}</b><p>{t}</p></div>)}</div>
     <span className="cn" style={{ top: 10145 }}><u>←</u><u>→</u></span>
     <CsDark top={10302} />
-  </div>;
+  </div></>;
 }
