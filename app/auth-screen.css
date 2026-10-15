@@ -35,12 +35,12 @@
 .au-fgt{float:right;font-weight:400;color:var(--au-accent);font-size:12px}.au-rem{display:flex;align-items:center;gap:8px;font-weight:400!important;margin:-4px 0 14px}.au-rem input{height:auto;margin:0}
 .au-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.au-alt{height:42px;border:1px solid #cfcfd6;border-radius:var(--au-r);background:#fff;font-weight:600;font-size:14px;font-family:inherit;cursor:pointer;color:var(--au-ink)}
 
-/* CleanShot Cloud login parity (1440) */
+/* CleanShotX Cloud login parity (1440) */
 .au--cs .au-body{grid-template-columns:50% 50%}
 .au--cs .au-art{display:block;padding:0;text-align:center;min-height:100vh}
 .au--cs .au-art>div:not(.au-brand):not(.au-artfoot){position:absolute;left:0;right:0;top:386px}
 .au--cs .au-brand{position:absolute;left:0;right:0;top:249px;display:flex;flex-direction:column;align-items:center;gap:15px}
-.au--cs .au-appicon{width:49px;height:49px;border-radius:12px;background:linear-gradient(135deg,#27c4ff,#1d6bff 60%,#1a3fd6);box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.au--cs .au-appicon{width:50px;height:50px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.35);display:block}.au-appicon svg{display:block}
 .au--cs .au-brand b{font-size:16px;line-height:20px;font-weight:600;letter-spacing:.01em}
 .au--cs .au-art h2{font-size:36px;line-height:43px;font-weight:600;letter-spacing:-.01em;margin:0 auto;max-width:320px}
 .au--cs .au-art p{font-size:14px;line-height:22px;opacity:.7;max-width:330px;margin:34px auto 0}

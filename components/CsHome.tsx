@@ -1,20 +1,21 @@
 import Link from "next/link";
+import { Mark } from "./Mark";
 import "./cshome.css";
 import { MeasuredPage } from "./m/MeasuredPage";
 import hm from "./m/home390.json";
 
-export const CsMark = ({ s = 30 }: { s?: number }) => <span className="cs-mark" style={{ width: s, height: s }}><svg width={s * .6} height={s * .6} viewBox="0 0 24 24" aria-hidden><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /><circle cx="12" cy="12" r="3" fill="#fff" /></svg></span>;
+export const CsMark = ({ s = 30 }: { s?: number }) => <Mark size={s} />;
 export function CsNav() {
-  return <header className="cs-nav"><Link href="/" className="lg"><CsMark /><b>CleanShot</b></Link>
+  return <header className="cs-nav"><Link href="/" className="lg"><CsMark /><b>CleanShotX</b></Link>
     <nav><a>Product <i>⌄</i></a><Link href="/pricing">Pricing</Link><a>License Manager</a><a>Support <i>⌄</i></a></nav>
     <Link href="/login" className="li">Log in</Link><Link href="/login" className="bn">Buy now</Link></header>;
 }
-const FC: [string, string[]][] = [["Product", ["All Features", "Changelog", "Testimonials", "Affiliate Program", "Available discounts", "URL scheme API"]], ["CleanShot Cloud", ["About CleanShot Cloud", "Log in to Cloud", "Security", "Terms of Service", "Privacy Policy", "Bug Bounty"]], ["License", ["Pricing", "License Manager", "Buy additional seats", "EULA", "Download"]], ["Support", ["Contact us", "FAQ", "Press kit", "Status Page", "YouTube"]]];
+const FC: [string, string[]][] = [["Product", ["All Features", "Changelog", "Testimonials", "Affiliate Program", "Available discounts", "URL scheme API"]], ["CleanShotX Cloud", ["About CleanShotX Cloud", "Log in to Cloud", "Security", "Terms of Service", "Privacy Policy", "Bug Bounty"]], ["License", ["Pricing", "License Manager", "Buy additional seats", "EULA", "Download"]], ["Support", ["Contact us", "FAQ", "Press kit", "Status Page", "YouTube"]]];
 export function CsDark({ top }: { top: number }) {
   return <section className="cs-dark" style={{ top }}>
     <span className="app"><CsMark s={90} /></span>
     <h2>Upgrade your Mac screen<br />capture workflow today.</h2>
-    <p className="sb">Try CleanShot risk-free with our 30-day money-back guarantee.</p>
+    <p className="sb">Try CleanShotX risk-free with our 30-day money-back guarantee.</p>
     <Link href="/login" className="gb">Get CleanShot X for Mac</Link>
     <hr />
     <div className="nl"><b>Stay in the loop</b><span>New features, product news, and occasional deals. No spam.</span></div>
@@ -41,13 +42,13 @@ const Feat = ({ x, y, t, p, items, btn, k = "" }: { x: number; y: number; t: str
   <div className={"ft " + k} style={{ left: x, top: y }}><h2>{t}</h2><p>{p}</p>{items?.map((i) => <div key={i} className="it"><i />{i}</div>)}{btn && <a className="ob">{btn}</a>}</div>;
 
 export function CsHome() {
-  return <><MeasuredPage data={hm as never} className="cs-hm" img={(it) => it.y < 60 && it.w > 100 ? <span style={{ display: "flex", alignItems: "center", gap: 10, height: it.h }}><CsMark s={32} /><b style={{ fontSize: 19, letterSpacing: "-.01em", color: "#121317" }}>CleanShot</b></span> : null} />
+  return <><MeasuredPage data={hm as never} className="cs-hm" img={(it) => it.y < 60 && it.w > 100 ? <span style={{ display: "flex", alignItems: "center", gap: 10, height: it.h }}><CsMark s={32} /><b style={{ fontSize: 19, letterSpacing: "-.01em", color: "#121317" }}>CleanShotX</b></span> : null} />
   <div className="cs-home mp-desk">
     <CsNav />
     <a className="intro">▷ Introducing Studio Mode</a>
-    <h1 className="h1"><span>There are average capture apps.</span><br /><span>And there&apos;s CleanShot.</span></h1>
+    <h1 className="h1"><span>There are average capture apps.</span><br /><span>And there&apos;s CleanShotX.</span></h1>
     <p className="lede">The Mac-native toolkit for screenshots, recordings and collaboration. Trusted by 250,000+ users.</p>
-    <Link href="/login" className="b1">Get CleanShot for Mac</Link><a className="b2">▷ How it works</a>
+    <Link href="/login" className="b1">Get CleanShotX for Mac</Link><a className="b2">▷ How it works</a>
     <a className="gu">30-Day Money-Back Guarantee ›</a>
     <div className="vid"><span className="pl">▶</span></div>
     <div className="tq"><p>This is an exceptionally well executed product. Quickly turned into my screenshot tool of choice. Bravo.</p><div className="who"><i /><b>Jason Fried<br /><small>Basecamp</small></b></div><span className="ar"><u>←</u><u>→</u></span></div>
@@ -65,7 +66,7 @@ export function CsHome() {
     <Head y={3201} t="Make your point, fast" p="Mark up details, hide sensitive information, add beautiful backgrounds, and crop when needed. All without leaving the app." btn="Explore screenshots" w={560} />
     <div className="car" style={{ top: 3385 }}>{[["Markup", "c-sky"], ["Redact", "c-lav"], ["Add Background", "c-sky2"], ["Crop", "c-sky"]].map(([t, th], i) => <div key={t} className={"cc " + th} style={{ left: 125 + i * 402 }}><b>{t}</b><span className="art" /></div>)}</div>
     <span className="cn" style={{ top: 3860 }}><u>←</u><u>→</u></span>
-    <Head y={4097} t="Share with CleanShot Cloud" p="Share screenshots and recordings instantly, gather feedback, and keep every capture easy to find, whether you work solo or with a team." btn="Explore CleanShot Cloud" w={560} />
+    <Head y={4097} t="Share with CleanShotX Cloud" p="Share screenshots and recordings instantly, gather feedback, and keep every capture easy to find, whether you work solo or with a team." btn="Explore CleanShotX Cloud" w={560} />
     <Card x={124} y={4280} w={583} h={420} th="c-blue" t="Share with one click" d="Upload any screenshot or recording and get a clean link instantly, ready to send anywhere." />
     <Card x={733} y={4280} w={279} h={420} th="c-lt" t="Custom domain and branding" />
     <Card x={1037} y={4280} w={279} h={420} th="c-navy" t="Enterprise-grade security"><u className="iso">ISO 27001</u></Card>
@@ -73,7 +74,7 @@ export function CsHome() {
     <Card x={428} y={4722} w={584} h={418} th="c-navy2" t="Discuss in context" d="Leave comments directly on screenshots and recordings so feedback stays attached to the work." />
     <Card x={1037} y={4722} w={279} h={418} th="c-navy" t="Automatic transcripts" />
     <h2 className="hd" style={{ top: 5341 }}>Video Editor<em className="pl">▷ Introducing Studio Mode</em></h2>
-    <p className="sp" style={{ top: 5403, width: 600 }}>Turn raw screen recordings into polished videos with a fast, Mac-native editor built right into CleanShot. Add zooms, trim mistakes, and fine-tune every detail before you export.</p>
+    <p className="sp" style={{ top: 5403, width: 600 }}>Turn raw screen recordings into polished videos with a fast, Mac-native editor built right into CleanShotX. Add zooms, trim mistakes, and fine-tune every detail before you export.</p>
     <a className="eb" style={{ top: 5419 }}>Explore recording</a>
     <div className="blk b-black" style={{ left: 124, top: 5555, width: 1192, height: 550 }}><span className="win" /></div>
     <Feat k="k2" x={124} y={6342} t="Scrolling Capture" p="Capture full pages, long chats, documents, and code that stretch beyond your screen, all in one clean image." items={["Capture every scrollable content", "Works in every app"]} btn="Explore screenshots" />
@@ -92,7 +93,7 @@ export function CsHome() {
     <a className="all" style={{ top: 9303 }}>Check all 50+ features ›</a>
     <p className="tl">Testimonials</p><h2 className="hd" style={{ top: 9609 }}>Loved by Mac users</h2>
     <div className="rt"><b>4.9 <i>★★★★★</i></b><small>Based on user reviews</small><a>Check out 350+ tweets ›</a></div>
-    <div className="tws" style={{ top: 9752 }}>{[["Steven Tey, Dub.co", "We've been long-time users of CleanShot at Dub! I literally cannot live without it anymore - every time I get a new Mac, CleanShot is the first app I install"], ["John O'Nolan, Ghost.org", "An absolutely essential tool for remote companies, where high quality annotated screenshots and recordings make up an enormous amount of team communication. I couldn't live without it."], ["Thomas Paul Mann, Raycast", "CleanShot lets me turn what's on my screen into something worth sharing. It's quick, polished and incredibly quick, and seamlessly"]].map(([n, t], i) => <div key={n} className="tw" style={{ left: 135 + i * 503 }}><i /><b>{n}</b><p>{t}</p></div>)}</div>
+    <div className="tws" style={{ top: 9752 }}>{[["Steven Tey, Dub.co", "We've been long-time users of CleanShotX at Dub! I literally cannot live without it anymore - every time I get a new Mac, CleanShotX is the first app I install"], ["John O'Nolan, Ghost.org", "An absolutely essential tool for remote companies, where high quality annotated screenshots and recordings make up an enormous amount of team communication. I couldn't live without it."], ["Thomas Paul Mann, Raycast", "CleanShotX lets me turn what's on my screen into something worth sharing. It's quick, polished and incredibly quick, and seamlessly"]].map(([n, t], i) => <div key={n} className="tw" style={{ left: 135 + i * 503 }}><i /><b>{n}</b><p>{t}</p></div>)}</div>
     <span className="cn" style={{ top: 10145 }}><u>←</u><u>→</u></span>
     <CsDark top={10302} />
   </div></>;

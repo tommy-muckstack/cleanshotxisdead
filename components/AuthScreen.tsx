@@ -1,4 +1,5 @@
 "use client";
+import { Mark } from "@/components/Mark";
 // Generic parity auth screen (login + signup) — original art, original wording where brand specific.
 // Copy into an app's components/ dir with auth-screen.css imported from globals.css.
 import { useState } from "react";
@@ -72,7 +73,7 @@ export function AuthScreen({ config, demo, to, signup = false, cfg }: { config: 
     {cfg.cs && mode === "signin" ? <p className="au-sso"><a href="#" onClick={e => e.preventDefault()} title={off}>SSO Login</a><i>·</i><a href="#" onClick={e => e.preventDefault()} title={off}><svg width="9" height="12" viewBox="0 0 9 12" aria-hidden><path fill="#2b7fff" d="M4.5 0l2 2.6L4.5 5 2.5 2.600zM4.500 7l2 2.400L4.500 12l-2-2.600zM0 5l2 2-2 2zM9 3l-2 2 2 2z" /></svg>Sign in with Setapp</a></p> : <p className="au-switch">{mode === "reset" ? <a href="#" onClick={swap("signin")}>Back to log in</a> : <>{sw[0]} <a href="#" onClick={swap(mode === "signup" ? "signin" : "signup")}>{sw[1]}</a></>}</p>}
     {cfg.footerNote && <p className="au-legal">{cfg.footerNote}</p>}
   </div>;
-  const artEl = art && <aside className={`au-art au-art--${art.kind}`} style={{ background: art.bg, color: art.fg }}>{art.brand && <div className="au-brand"><span className="au-appicon" /><b>{art.brand}</b></div>}<div>{art.title && <h2>{art.title}</h2>}{art.sub && <p>{art.sub}</p>}
+  const artEl = art && <aside className={`au-art au-art--${art.kind}`} style={{ background: art.bg, color: art.fg }}>{art.brand && <div className="au-brand"><span className="au-appicon"><Mark size={50} /></span><b>{art.brand}</b></div>}<div>{art.title && <h2>{art.title}</h2>}{art.sub && <p>{art.sub}</p>}
     {art.link && <a className="au-artlink" href="#" onClick={e => e.preventDefault()}>{art.link}</a>}{art.blocks && <div className="au-blocks">{art.blocks.map((c, i) => <i key={i} style={{ background: c, height: 60 + (i * 37) % 90 }} />)}</div>}</div>{art.foot && <div className="au-artfoot"><span>{art.foot[0]}</span><nav>{art.foot.slice(1).map(f => <a key={f} href="#" onClick={e => e.preventDefault()}>{f}</a>)}</nav></div>}</aside>;
   return <main className={`au au--${cfg.layout}${cfg.cs ? " au--cs" : ""}`} style={style}>
     {cfg.top && <header className={`au-top${cfg.top.dark ? " dark" : ""}`}>{cfg.top.logo !== false && !cfg.logoCenter ? <Link href="/" className="au-toplogo"><Logo size={22} /></Link> : <span />}<div>{cfg.top.right && <a href={cfg.top.rightHref ?? "#"}>{cfg.top.right}</a>}{cfg.top.cta && <Link className="au-topcta" href="/login?mode=signup">{cfg.top.cta}</Link>}</div></header>}
