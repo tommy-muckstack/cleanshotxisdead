@@ -28,15 +28,15 @@ export const CsFoot = CsDark;
 type Th = string;
 const Card = ({ x, y, w, h, th, t, d, children }: { x: number; y: number; w: number; h: number; th: Th; t: string; d?: string; children?: React.ReactNode }) =>
   <div className={"cd " + th} style={{ left: x, top: y, width: w, height: h }}><h3>{t}</h3>{d && <p>{d}</p>}{children}<span className="art" /></div>;
-const Blk = ({ x, y, w, h, th }: { x: number; y: number; w: number; h: number; th: string }) => <div className={"blk " + th} style={{ left: x, top: y, width: w, height: h }}><span className="win" /></div>;
+const Blk = ({ x, y, w, h, th, k = "" }: { x: number; y: number; w: number; h: number; th: string; k?: string }) => <div className={"blk " + th + " " + k} style={{ left: x, top: y, width: w, height: h }}><span className="win" /></div>;
 const Head = ({ y, t, p, btn, w = 560, pill }: { y: number; t: string; p: string; btn?: string; w?: number; pill?: boolean }) =>
   <>
     <h2 className="hd" style={{ top: y }}>{t}{pill && <em className="pl">▷ Introducing Studio Mode</em>}</h2>
     <p className="sp" style={{ top: y + 62, width: w }}>{p}</p>
     {btn && <a className="eb" style={{ top: y + 78 }}>{btn}</a>}
   </>;
-const Feat = ({ x, y, t, p, items, btn }: { x: number; y: number; t: string; p: string; items?: string[]; btn?: string }) =>
-  <div className="ft" style={{ left: x, top: y }}><h2>{t}</h2><p>{p}</p>{items?.map((i) => <div key={i} className="it"><i />{i}</div>)}{btn && <a className="ob">{btn}</a>}</div>;
+const Feat = ({ x, y, t, p, items, btn, k = "" }: { x: number; y: number; t: string; p: string; items?: string[]; btn?: string; k?: string }) =>
+  <div className={"ft " + k} style={{ left: x, top: y }}><h2>{t}</h2><p>{p}</p>{items?.map((i) => <div key={i} className="it"><i />{i}</div>)}{btn && <a className="ob">{btn}</a>}</div>;
 
 export function CsHome() {
   return <div className="cs-home">
@@ -50,7 +50,7 @@ export function CsHome() {
     <div className="tq"><p>This is an exceptionally well executed product. Quickly turned into my screenshot tool of choice. Bravo.</p><div className="who"><i /><b>Jason Fried<br /><small>Basecamp</small></b></div><span className="ar"><u>←</u><u>→</u></span></div>
     <p className="tr">Trusted by teams at:</p>
     <div className="lgs">{["linear", "Vercel", "CURSOR", "1Password", "Framer", "Basecamp"].map((l) => <span key={l}>{l}</span>)}</div>
-    <Feat x={124} y={1442} t="Always one drag away" p="Capture something and it's instantly ready to share. Save it, copy it, or drop it straight into any app. No folders to dig through, no flow to break." />
+    <Feat k="k1" x={124} y={1442} t="Always one drag away" p="Capture something and it's instantly ready to share. Save it, copy it, or drop it straight into any app. No folders to dig through, no flow to break." />
     <Blk x={635} y={1277} w={681} h={480} th="b-blue" />
     <Head y={1957} t="Screen recordings worth sharing" p="Record your screen in a few clicks, then export a polished video or a quick GIF. Everything you need to make it look great is already built in." btn="Explore recording" w={640} />
     <Card x={124} y={2140} w={583} h={417} th="c-peach" t="Add your camera" d="Add a webcam bubble to your recording so people see you, not just your screen." />
@@ -73,11 +73,11 @@ export function CsHome() {
     <p className="sp" style={{ top: 5403, width: 600 }}>Turn raw screen recordings into polished videos with a fast, Mac-native editor built right into CleanShot. Add zooms, trim mistakes, and fine-tune every detail before you export.</p>
     <a className="eb" style={{ top: 5419 }}>Explore recording</a>
     <div className="blk b-black" style={{ left: 124, top: 5555, width: 1192, height: 550 }}><span className="win" /></div>
-    <Feat x={124} y={6342} t="Scrolling Capture" p="Capture full pages, long chats, documents, and code that stretch beyond your screen, all in one clean image." items={["Capture every scrollable content", "Works in every app"]} btn="Explore screenshots" />
-    <Blk x={635} y={6305} w={681} h={480} th="b-navy" />
+    <Feat k="k2" x={124} y={6342} t="Scrolling Capture" p="Capture full pages, long chats, documents, and code that stretch beyond your screen, all in one clean image." items={["Capture every scrollable content", "Works in every app"]} btn="Explore screenshots" />
+    <Blk k="sc" x={635} y={6305} w={681} h={480} th="b-navy" />
     <Blk x={124} y={6985} w={681} h={480} th="b-black" />
-    <Feat x={884} y={6995} t="Background Tool" p="Turn plain screenshots into polished visuals with beautiful backgrounds, padding, shadows, and custom styles, ready to share anywhere." items={["Perfect for social posts and docs", "20 beautiful backgrounds included", "Create your own presets"]} btn="Learn more" />
-    <Feat x={124} y={7715} t="Text Recognition" p="Copy text from screenshots, images, and scanned documents in seconds, with fast on-device recognition built into the app." items={["Copy text from any image", "Read QR codes instantly", "Fast and private by design"]} />
+    <Feat k="k3" x={884} y={6995} t="Background Tool" p="Turn plain screenshots into polished visuals with beautiful backgrounds, padding, shadows, and custom styles, ready to share anywhere." items={["Perfect for social posts and docs", "20 beautiful backgrounds included", "Create your own presets"]} btn="Learn more" />
+    <Feat k="k4" x={124} y={7715} t="Text Recognition" p="Copy text from screenshots, images, and scanned documents in seconds, with fast on-device recognition built into the app." items={["Copy text from any image", "Read QR codes instantly", "Fast and private by design"]} />
     <Blk x={635} y={7665} w={681} h={480} th="b-navy" />
     <h2 className="hd" style={{ top: 8315 }}>Built for everyday Mac workflows</h2>
     <Card x={124} y={8403} w={583} h={418} th="c-navy2" t="Capture History" d="Never lose a screenshot or recording. Quickly find, restore, and reuse anything you captured before." />
