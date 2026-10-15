@@ -30,8 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setUpStatusItem()
         Hotkeys.shared.perform = { [weak self] in self?.perform($0) }
         Hotkeys.shared.registerAll()
+        Analytics.track("app_opened")
         ScreenRecorder.shared.onStateChange = { [weak self] in self?.refreshStatusIcon() }
         NotificationCenter.default.addObserver(forName: .showMenuBarIconChanged, object: nil, queue: .main) { [weak self] _ in self?.refreshStatusIcon() }
+        if let tab = ProcessInfo.processInfo.environment["CSX_SETTINGS_TAB"].flatMap(SettingsTab.init(rawValue:)) { showSettings(); settingsWindow?.show(tab: tab) }
         if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
             Task { @MainActor in _ = await CaptureEngine.shared.authorizeInteractively(); self.showSettings() }
@@ -54,6 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case .capturePreviousArea: capture.capturePreviousArea()
         case .captureFullscreen: capture.captureFullscreen()
         case .captureWindow: capture.captureWindow()
+        case .scrollingCapture: ScrollingCapture.shared.begin()
         case .selfTimer: capture.selfTimer()
         case .captureAreaCopy: capture.captureArea(.copy)
         case .captureAreaSave: capture.captureArea(.save)
@@ -69,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
     @objc private func menuAction(_ sender: NSMenuItem) { if let a = HotkeyAction(rawValue: sender.identifier?.rawValue ?? "") { perform(a) } }
-    @objc func showSettings() { if settingsWindow == nil { settingsWindow = SettingsWindowController() }; settingsWindow?.show() }
+    @objc func showSettings() { if settingsWindow == nil { settingsWindow = SettingsWindowController() }; settingsWindow?.show(); Analytics.track("app_settings_opened") }
     @objc func showHistory() { if historyWindow == nil { historyWindow = HistoryWindowController() }; historyWindow?.show() }
     @objc private func showAbout() { settingsWindow = settingsWindow ?? SettingsWindowController(); settingsWindow?.show(tab: .about) }
     @objc private func checkForUpdates() { if let updater { updater.checkForUpdates(nil) } else { Toast.show("Updates work in the installed app, not a dev build", systemImage: "arrow.down.circle") } }
@@ -102,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         row("Capture Area", "viewfinder", .captureArea)
         row("Capture Fullscreen", "display", .captureFullscreen)
         row("Capture Window", "macwindow", .captureWindow)
+        row("Scrolling Capture", "arrow.down.to.line", .scrollingCapture)
         row("Self-Timer", "timer", .selfTimer)
         row("Capture Text (OCR)", "text.viewfinder", .captureText)
         row(recording ? "Stop Recording" : "Record Screen", recording ? "stop.circle" : "video", .recordScreen)

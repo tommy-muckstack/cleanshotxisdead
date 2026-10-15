@@ -276,7 +276,7 @@ final class EditorModel: ObservableObject {
             pasteboard.clearContents()
             pasteboard.setString(analysis.text, forType: .string)
             didCopyText = true
-            Analytics.track("editor_text_copied", ["chars": analysis.text.count])
+            Analytics.track("app_editor_text_copied", ["chars": analysis.text.count])
             try? await Task.sleep(for: .seconds(2))
             didCopyText = false
         }
@@ -313,7 +313,7 @@ final class EditorModel: ObservableObject {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-        Analytics.track("editor_text_copied", ["chars": text.count])
+        Analytics.track("app_editor_text_copied", ["chars": text.count])
         didCopyText = true
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(2))
@@ -524,7 +524,7 @@ final class EditorModel: ObservableObject {
                 self.image = NSImage(cgImage: masked, size: size)
                 self.backgroundRemoved = true
                 self.backdrop = .none
-                Analytics.track("editor_background_removed")
+                Analytics.track("app_editor_background_removed")
             }
         }
     }
@@ -790,7 +790,7 @@ final class EditorModel: ObservableObject {
     /// Overwrites the original capture file with the edited render.
     @discardableResult
     func save() -> NSImage? {
-        Analytics.track("editor_saved", [
+        Analytics.track("app_editor_saved", [
             "annotations": annotations.count,
             "backdrop": backdrop.rawValue,
             "cutout": backgroundRemoved,

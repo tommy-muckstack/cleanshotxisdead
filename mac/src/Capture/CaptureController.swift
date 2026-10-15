@@ -45,7 +45,7 @@ final class CaptureController: SelectionOverlayDelegate {
             guard let frozen = try? await CaptureEngine.shared.captureAllDisplaysComposite() else { return }
             let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main ?? NSScreen.screens[0]
             guard let image = frozen.crop(to: screen.frame) else { return }
-            finish(image, scale: frozen.scaleFactor)
+            finish(image, scale: frozen.scaleFactor, kind: seconds > 0 ? "timer" : "fullscreen")
         }
     }
 
@@ -57,7 +57,7 @@ final class CaptureController: SelectionOverlayDelegate {
             guard await CaptureEngine.shared.authorizeInteractively() else { showPermissionAlert(); return }
             DesktopIcons.hideForCaptureIfNeeded()
             guard let frozen = try? await CaptureEngine.shared.captureAllDisplaysComposite(), let image = frozen.crop(to: rect) else { return }
-            finish(image, scale: frozen.scaleFactor)
+            finish(image, scale: frozen.scaleFactor, kind: "previous_area")
         }
     }
 
@@ -68,8 +68,8 @@ final class CaptureController: SelectionOverlayDelegate {
                 guard let windowID else { return }
                 Task { @MainActor in
                     do {
-                        let (image, scale) = try await CaptureEngine.shared.captureWindowForAgent(id: String(windowID))
-                        self?.finish(image, scale: scale)
+                        let (image, scale) = try await WindowCapture.capture(windowID: windowID)
+                        self?.finish(image, scale: scale, kind: "window")
                     } catch { Toast.show("Couldn't capture that window", systemImage: "exclamationmark.triangle") }
                 }
             }
@@ -117,7 +117,7 @@ final class CaptureController: SelectionOverlayDelegate {
             Task { await OCR.copyText(from: image) }
         default:
             guard let image = frozen?.crop(to: rect) else { return }
-            finish(image, scale: Double(frozen?.scaleFactor ?? 2))
+            finish(image, scale: Double(frozen?.scaleFactor ?? 2), kind: "area")
         }
     }
 
@@ -128,7 +128,10 @@ final class CaptureController: SelectionOverlayDelegate {
 
     // MARK: Pipeline
 
-    private func finish(_ raw: NSImage, scale: Double) {
+    /// Entry for captures produced elsewhere (scrolling capture).
+    func finishExternal(_ image: NSImage, scale: Double) { finish(image, scale: scale, kind: "scrolling") }
+
+    private func finish(_ raw: NSImage, scale: Double, kind: String) {
         DesktopIcons.restoreAfterCapture()
         let s = SettingsStore.shared
         var image = raw
@@ -136,6 +139,7 @@ final class CaptureController: SelectionOverlayDelegate {
         if s.addBorder { image = image.withBorder() }
         let entry = store(image, kind: .screenshot, retina: !s.scaleRetinaTo1x && scale > 1)
         if s.playSounds { CaptureSoundPlayer.shared.play() }
+        Analytics.track("app_capture_taken", ["kind": kind, "mode": String(describing: areaMode)])
 
         let mode = areaMode; areaMode = .capture
         switch mode {
@@ -175,6 +179,7 @@ final class CaptureController: SelectionOverlayDelegate {
         if s.afterRecSave { CaptureActions.saveToExportLocation(entry, quiet: true) }
         if s.afterRecUpload { Task { await CloudUploader.shared.upload(entry) } }
         if s.afterRecOverlay { QuickAccessOverlay.shared.add(entry, image: entry.fileURL.movieThumbnail()) }
+        Analytics.track("app_recording_saved", ["format": url.pathExtension])
     }
 
     private func showPermissionAlert() {
@@ -231,14 +236,16 @@ enum DesktopIcons {
     static func set(hidden: Bool) {
         _ = shell("defaults write com.apple.finder CreateDesktop -bool \(hidden ? "false" : "true"); killall Finder")
     }
-    static func toggle() { set(hidden: !hidden) }
+    static func toggle() { set(hidden: !hidden); Task { @MainActor in try? await Task.sleep(for: .milliseconds(600)); DesktopCover.apply() } }
     static func hideForCaptureIfNeeded() {
         guard SettingsStore.shared.hideDesktopIconsWhileCapturing, !hidden else { return }
         hiddenForCapture = true; set(hidden: true)
+        Task { @MainActor in try? await Task.sleep(for: .milliseconds(500)); DesktopCover.apply() }
     }
     static func restoreAfterCapture() {
         guard hiddenForCapture else { return }
         hiddenForCapture = false; set(hidden: false)
+        Task { @MainActor in DesktopCover.remove() }
     }
     @discardableResult private static func shell(_ cmd: String) -> String {
         let p = Process(); p.launchPath = "/bin/zsh"; p.arguments = ["-c", cmd]
