@@ -1,0 +1,1117 @@
+import AppKit
+import SwiftUI
+
+struct CustomBackdropPicker: View {
+    @ObservedObject var model: EditorModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: MM.Layout.spacing) {
+            ColorPicker("Background color", selection: Binding(
+                get: { Color(nsColor: model.customBackdropColor) },
+                set: { model.customBackdropColor = NSColor($0); model.backdrop = .custom }
+            ), supportsOpacity: false).font(MM.Fonts.body).clickable()
+            Text("Your color is saved for future screenshots.")
+                .font(MM.Fonts.metadata).foregroundStyle(MM.Colors.textSecondary)
+        }
+    }
+}
+
+enum EditorTool: String, CaseIterable, Identifiable {
+    case select, box, filledBox, ellipse, line, arrow, text, pixelate, highlight, counter, pen, crop, ocr
+    var id: String { rawValue }
+
+    /// SF Symbol name, or nil when the tool uses an MMIcon instead.
+    var symbol: String? {
+        switch self {
+        case .select: return nil
+        case .arrow: return "arrow.up.right"
+        case .box: return "rectangle"
+        case .filledBox: return "rectangle.fill"
+        case .ellipse: return "circle"
+        case .line: return "line.diagonal"
+        case .highlight: return "highlighter"
+        case .text: return "textformat"
+        case .pixelate: return "eye.slash"
+        case .counter: return "1.circle.fill"
+        case .pen: return "scribble.variable"
+        case .crop: return "crop"
+        case .ocr: return "text.viewfinder"
+        }
+    }
+
+    var mmIcon: MMIcon? {
+        self == .select ? .pointer : nil
+    }
+
+    var help: String {
+        switch self {
+        case .select: return "Select — click and drag existing annotations"
+        case .arrow: return "Arrow — drag to point at something"
+        case .box: return "Rectangle — drag to frame something"
+        case .filledBox: return "Filled rectangle — drag to cover something"
+        case .ellipse: return "Ellipse — drag to circle something"
+        case .line: return "Line — drag to draw a straight line"
+        case .counter: return "Counter — click to drop a numbered badge"
+        case .pen: return "Pen — draw freehand"
+        case .highlight: return "Highlight — drag to mark something"
+        case .text: return "Text — click to type"
+        case .pixelate: return "Hide — drag to pixelate sensitive info"
+        case .crop: return "Crop — drag to keep just that region"
+        case .ocr: return "Select text — drag across the text in the image to copy it"
+        }
+    }
+}
+
+struct EditorView: View {
+    @ObservedObject var model: EditorModel
+    @State private var tool: EditorTool = .box
+    @State private var zoomPercent: Double = 100
+    @State private var dragStart: CGPoint?
+    @State private var dragCurrent: CGPoint?
+    @State private var pendingText: (origin: CGPoint, id: UUID)?
+    @State private var textDraft = ""
+    @FocusState private var textFocused: Bool
+
+    @State private var scanning = false
+    private enum DragMode { case undecided, drawing, moving(UUID, last: CGPoint), resizing(UUID, EditorModel.ResizeHandle) }
+    @State private var dragMode: DragMode = .undecided
+    @State private var selectedAnnotation: UUID?
+
+    /// Toolbar clusters that collapse to a single chip showing the current
+    /// choice, and animate open into the full row when clicked. One state
+    /// value — opening a group closes whichever other one was open.
+    private enum ToolbarGroup { case draw, backdrop, color }
+    @State private var expandedGroup: ToolbarGroup?
+    @State private var showCustomBackdrop = false
+    /// What the collapsed draw chip shows while a non-draw tool is active.
+    @State private var lastDrawTool: EditorTool = .arrow
+    private static let drawTools: [EditorTool] = [.box, .filledBox, .ellipse, .line, .arrow, .text, .highlight, .counter, .pen]
+    @State private var penPoints: [CGPoint] = []
+
+    var onDone: () -> Void = {}
+    var onSaved: (NSImage, URL) -> Void = { _, _ in }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            toolbar
+            canvas
+                .contextMenu {
+                    Button("Copy") { model.copyToClipboard() }
+                }
+                .padding(MM.Layout.paddingLarge)
+            bottomBar
+        }
+        .background(MM.Colors.background)
+        .onKeyPress(.escape) {
+            if pendingText != nil { cancelText(); return .handled }
+            return .ignored
+        }
+    }
+
+    // MARK: Toolbar
+
+    private var toolbar: some View {
+        HStack(spacing: 6) {
+            // The tools scroll sideways when the window is narrow; the
+            // actions on the right keep their size and never overlap.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+            toolButton(.select)
+            drawToolsGroup
+            toolButton(.pixelate)
+            toolButton(.crop)
+            toolButton(.ocr)
+            strokeWidthGroup
+            textSizeGroup
+
+            Divider().frame(height: 18).overlay(MM.Colors.border).padding(.horizontal, 6)
+
+            backdropGroup
+
+            Divider().frame(height: 18).overlay(MM.Colors.border).padding(.horizontal, 6)
+
+            Button {
+                model.removeBackground()
+            } label: {
+                Group {
+                    if model.isRemovingBackground {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "person.and.background.dotted")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                }
+                .frame(width: 30, height: 26)
+                    .clickable(minSize: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(model.backgroundRemoved ? MM.Colors.textTertiary : MM.Colors.textSecondary)
+            .disabled(model.isRemovingBackground || model.backgroundRemoved)
+            .help("Remove background — make the surrounding area transparent")
+            .alert("Background unchanged", isPresented: Binding(get: { model.backgroundRemovalError != nil }, set: { if !$0 { model.backgroundRemovalError = nil } })) {
+                Button("OK") { model.backgroundRemovalError = nil }.clickable()
+            } message: { Text(model.backgroundRemovalError ?? "") }
+
+            Button {
+                addPhoto()
+            } label: {
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 30, height: 26)
+                    .clickable(minSize: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(MM.Colors.textSecondary)
+            .help("Photo — overlay an image from disk")
+
+
+            Button {
+                withAnimation(MM.Motion.gentle) {
+                    model.cornerRadius = model.cornerRadius == 0 ? 12 : (model.cornerRadius == 12 ? 24 : 0)
+                }
+            } label: {
+                Image(systemName: "rectangle.roundedtop")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 30, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(model.cornerRadius > 0 ? MM.Colors.surface : .clear)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(model.cornerRadius > 0 ? MM.Colors.border : .clear, lineWidth: 1)
+                    )
+                    .overlay(alignment: .bottomTrailing) {
+                        if model.cornerRadius > 0 {
+                            Text("\(Int(model.cornerRadius))")
+                                .font(MM.Fonts.metadata)
+                                .foregroundStyle(MM.Colors.textTertiary)
+                                .offset(x: -2, y: -1)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(model.cornerRadius == 0 ? MM.Colors.textSecondary : MM.Colors.textPrimary)
+            .help("Corners — round the image corners (cycles 0 / 12 / 24)")
+
+
+            colorGroup
+                }
+                .padding(.vertical, 2)
+            }
+            .layoutPriority(0)
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 6) {
+            if model.didCopyText {
+                Text("Copied")
+                    .font(MM.Fonts.hint)
+                    .foregroundStyle(.green)
+                    .transition(.opacity)
+            }
+            if selectedAnnotation != nil {
+                Button {
+                    if let id = selectedAnnotation {
+                        model.remove(id)
+                        selectedAnnotation = nil
+                    }
+                } label: {
+                    IconView(icon: .trash, size: 14, color: MM.Colors.textSecondary)
+                        .frame(width: 30, height: 26)
+                        .clickable(minSize: 30)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.delete, modifiers: [])
+                .help("Delete selected annotation (⌫)")
+            }
+
+            Button {
+                model.undo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 30, height: 26)
+                    .clickable(minSize: 30)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(MM.Colors.textSecondary)
+            .keyboardShortcut("z", modifiers: .command)
+            .help("Undo (⌘Z)")
+
+            Button {
+                model.copyToClipboard()
+            } label: {
+                IconView(icon: .copy, size: 14, color: MM.Colors.textSecondary)
+                    .frame(width: 30, height: 26)
+                    .clickable(minSize: 30)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("c", modifiers: [.command, .shift])
+            .help("Copy image (⇧⌘C)")
+
+            Button {
+                let panel = NSSavePanel()
+                panel.nameFieldStringValue = model.fileURL.lastPathComponent
+                panel.directoryURL = SettingsStore.shared.screenshotFolderURL
+                if panel.runModal() == .OK, let url = panel.url {
+                    let final = model.renderFinal()
+                    try? final.encoded(format: url.pathExtension.lowercased() == "jpg" ? "jpg" : "png", sRGB: false)?.write(to: url)
+                }
+            } label: {
+                Text("Save as…")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .frame(height: 28)
+                    .fixedSize()
+                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.12)))
+                    .clickable(minSize: 28)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("s", modifiers: [.command, .shift])
+            .help("Save as… (⇧⌘S)")
+
+            Button {
+                if let image = model.save() { onSaved(image, model.fileURL) }
+                onDone()
+            } label: {
+                Text("Done")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .frame(height: 28)
+                    .fixedSize()
+                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color(red: 0.16, green: 0.42, blue: 1)))
+                    .clickable(minSize: 28)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("s", modifiers: .command)
+            .keyboardShortcut(.return, modifiers: .command)
+            .help("Done — save and close (⌘S)")
+            }
+            .fixedSize()
+            .layoutPriority(1)
+        }
+        .padding(.horizontal, MM.Layout.padding)
+        .padding(.top, 2)
+        // One fixed row height: every control centers on the same axis, and
+        // nothing (looking at you, pill buttons) can stretch the bar.
+        .frame(height: 50)
+        .background(Color(nsColor: NSColor(white: 0.16, alpha: 1)))
+    }
+
+    /// CleanShot-style bottom bar: zoom on the left, a drag handle for the
+    /// finished image in the middle, share/pin/copy/upload on the right.
+    private var bottomBar: some View {
+        HStack {
+            Text("\(Int(zoomPercent))%")
+                .font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
+                .padding(.horizontal, 10).frame(height: 28)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.12)))
+            Spacer()
+            HStack(spacing: 6) {
+                Image(systemName: "line.3.horizontal").font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.5))
+                Text("Drag Me").font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
+                Image(systemName: "line.3.horizontal").font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(.horizontal, 14).frame(height: 32)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(0.12)))
+            .onDrag { dragProvider() }
+            .help("Drag the finished image into any app")
+            Spacer()
+            HStack(spacing: 6) {
+                bottomAction("square.and.arrow.up", "Share") {
+                    if let final = model.renderFinal().encoded(format: "png", sRGB: false) {
+                        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(model.fileURL.lastPathComponent)
+                        try? final.write(to: tmp)
+                        NSSharingServicePicker(items: [tmp]).show(relativeTo: .zero, of: NSApp.keyWindow?.contentView ?? NSView(), preferredEdge: .minY)
+                    }
+                }
+                bottomAction("pin", "Pin to the screen") { PinnedWindow.show(image: model.renderFinal()) }
+                bottomAction("doc.on.doc", "Copy") { model.copyToClipboard(); Toast.show("Copied", systemImage: "doc.on.doc") }
+                bottomAction("icloud.and.arrow.up", "Upload to Cloud") {
+                    if let image = model.save() { onSaved(image, model.fileURL) }
+                    let entry = HistoryStore.shared.entries.first { $0.path == model.fileURL.path } ?? HistoryEntry(id: UUID().uuidString, path: model.fileURL.path, kind: .screenshot, createdAt: Date())
+                    Task { await CloudUploader.shared.upload(entry) }
+                }
+            }
+        }
+        .padding(.horizontal, MM.Layout.padding)
+        .frame(height: 50)
+        .background(Color(nsColor: NSColor(white: 0.16, alpha: 1)))
+    }
+
+    private func bottomAction(_ symbol: String, _ help: String, _ run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            Image(systemName: symbol).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                .frame(width: 36, height: 28)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.12)))
+                .clickable(minSize: 28)
+        }.buttonStyle(.plain).help(help)
+    }
+
+    private func dragProvider() -> NSItemProvider {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent(model.fileURL.lastPathComponent)
+        try? model.renderFinal().encoded(format: "png", sRGB: false)?.write(to: tmp)
+        return NSItemProvider(object: tmp as NSURL)
+    }
+
+    // MARK: Collapsible toolbar groups
+
+    /// Open a group's row (closing any other). A pending text entry commits
+    /// first so its caret doesn't keep blinking behind the expanded row.
+    private func expand(_ group: ToolbarGroup) {
+        commitText()
+        withAnimation(MM.Motion.gentle) { expandedGroup = group }
+    }
+
+    /// The collapsed face of a group: current choice + a chevron.
+    private func groupChip(help: String, isActive: Bool = false,
+                           action: @escaping () -> Void,
+                           @ViewBuilder label: () -> some View) -> some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                label()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(MM.Colors.textTertiary)
+            }
+            .padding(.horizontal, 6)
+            .frame(height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isActive ? MM.Colors.surface : .clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(isActive ? MM.Colors.border : .clear, lineWidth: 1)
+            )
+            .clickable(minSize: 30)
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    /// Every drawing tool, always visible: one click to any of them.
+    @ViewBuilder private var drawToolsGroup: some View {
+        ForEach(Self.drawTools) { t in toolButton(t) }
+    }
+
+    /// Line weight for new strokes, as a small menu next to the color.
+    private var strokeWidthGroup: some View {
+        Menu {
+            ForEach(EditorModel.strokeWidths, id: \.self) { width in
+                Button {
+                    model.strokeWidth = width
+                    if let id = selectedAnnotation { model.annotationStrokeWidths[id] = width }
+                } label: {
+                    Label(Self.strokeName(width), systemImage: model.strokeWidth == width ? "checkmark" : "")
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Capsule().fill(MM.Colors.textPrimary).frame(width: 16, height: max(1.5, min(6, model.strokeWidth * 0.8)))
+                Image(systemName: "chevron.down").font(.system(size: 7, weight: .bold)).foregroundStyle(MM.Colors.textTertiary)
+            }
+            .padding(.horizontal, 6).frame(height: 26).clickable(minSize: 30)
+        }
+        .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+        .help("Line width — \(Self.strokeName(model.strokeWidth))")
+        .accessibilityLabel("Line width")
+    }
+
+    private var selectedTextID: UUID? {
+        guard pendingText == nil,
+              let annotation = model.annotations.first(where: { $0.id == selectedAnnotation }),
+              case .text = annotation else { return nil }
+        return annotation.id
+    }
+
+    private var textSizeGroup: some View {
+        let size = model.textSize(for: selectedTextID)
+        return Menu {
+            ForEach(EditorModel.textSizes, id: \.self) { value in
+                Button {
+                    model.setTextSize(value, selected: selectedTextID)
+                    if pendingText != nil { textFocused = true }
+                } label: {
+                    Label("\(Int(value)) pt", systemImage: size == value ? "checkmark" : "")
+                }
+            }
+        } label: {
+            Text("\(Int(size.rounded())) pt")
+                .font(MM.Fonts.secondary)
+                .foregroundStyle(MM.Colors.textPrimary)
+                .padding(.horizontal, MM.Layout.spacing / 2)
+                .clickable()
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Text size — applies to selected text and new text")
+        .accessibilityLabel("Text size")
+        .accessibilityValue("\(Int(size.rounded())) points")
+    }
+
+    private static func strokeName(_ width: CGFloat) -> String {
+        switch width { case 2: "Thin"; case 3: "Regular"; case 5: "Bold"; default: "Heavy" }
+    }
+
+    /// Backdrop chips collapse to the current backdrop's swatch.
+    @ViewBuilder private var backdropGroup: some View {
+        if expandedGroup == .backdrop {
+            ForEach(BackdropStyle.allCases.filter { $0 != .custom }) { style in
+                backdropChip(style)
+                    .transition(.scale(scale: 0.5).combined(with: .opacity))
+            }
+            Button { model.backdrop = .custom; showCustomBackdrop = true } label: {
+                backdropSwatch(.custom)
+                    .overlay(Image(systemName: "plus").font(MM.Fonts.metadata).foregroundStyle(MM.Colors.textPrimary))
+                    .overlay(Circle().strokeBorder(model.backdrop == .custom ? MM.Colors.textPrimary : .clear, lineWidth: 1.5).padding(-3))
+                    .clickable(minSize: 24)
+            }.buttonStyle(.plain).accessibilityLabel("Custom background color").help("Custom background color — saved for next time")
+                .popover(isPresented: $showCustomBackdrop) {
+                    CustomBackdropPicker(model: model).padding(MM.Layout.padding)
+                }
+        } else {
+            groupChip(help: "Backdrop — click to choose",
+                      action: { expand(.backdrop) }) {
+                backdropSwatch(model.backdrop)
+            }
+        }
+    }
+
+    private var activeAnnotationColor: NSColor {
+        if let annotation = model.annotations.first(where: { $0.id == selectedAnnotation }), annotation.supportsColor {
+            return model.color(for: annotation)
+        }
+        return tool == .highlight ? model.highlightAnnotationColor : model.annotationColor
+    }
+
+    /// Show the selected object's color, or the default for the next drawing.
+    @ViewBuilder private var colorGroup: some View {
+        if expandedGroup == .color {
+            HStack(spacing: 6) {
+                ForEach(annotationColors.indices, id: \.self) { index in
+                    let color = annotationColors[index]
+                    Button {
+                        withAnimation(MM.Motion.gentle) {
+                            model.setAnnotationColor(color, selected: selectedAnnotation)
+                            expandedGroup = nil
+                        }
+                    } label: {
+                        colorSwatch(color)
+                            .overlay(Circle().strokeBorder(MM.Colors.textPrimary, lineWidth: 2)
+                                .opacity(activeAnnotationColor.withAlphaComponent(1).isEqual(color) ? 1 : 0))
+                            .clickable(minSize: 26)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Annotation color: \(["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "White"][index])")
+                }
+            }
+            .transition(.scale(scale: 0.5).combined(with: .opacity))
+            .help("Annotation color")
+        } else {
+            groupChip(help: "Annotation color — click to choose",
+                      action: { expand(.color) }) {
+                colorSwatch(activeAnnotationColor)
+            }
+        }
+    }
+
+    private func colorSwatch(_ color: NSColor) -> some View {
+        Circle()
+            .fill(Color(nsColor: color))
+            .frame(width: 16, height: 16)
+            .overlay(Circle().strokeBorder(.white.opacity(0.8), lineWidth: 1))
+    }
+
+    private func toolButton(_ t: EditorTool) -> some View {
+        Button {
+            // A half-typed text label must not keep its caret blinking under
+            // another tool: commit it (or drop it if empty) on any switch.
+            commitText()
+            withAnimation(MM.Motion.gentle) {
+                tool = t
+                if Self.drawTools.contains(t) { lastDrawTool = t }
+                // Choosing anything closes whichever dropdown row was open.
+                expandedGroup = nil
+            }
+            if t == .ocr {
+                scanning = true
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(750))
+                    withAnimation(MM.Motion.gentle) { scanning = false }
+                }
+            }
+        } label: {
+            Group {
+                if let mm = t.mmIcon {
+                    IconView(icon: mm, size: 14,
+                             color: tool == t ? MM.Colors.textPrimary : MM.Colors.textSecondary)
+                } else {
+                    Image(systemName: t.symbol ?? "questionmark")
+                        .font(.system(size: 13, weight: .medium))
+                }
+            }
+            .frame(width: 30, height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(tool == t ? MM.Colors.surface : .clear)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(tool == t ? MM.Colors.border : .clear, lineWidth: 1)
+                )
+                .clickable(minSize: 30)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(tool == t ? MM.Colors.textPrimary : MM.Colors.textSecondary)
+        .help(t.help)
+    }
+
+    /// The chip's visual alone — shared by the picker row and the collapsed
+    /// group chip.
+    private func backdropSwatch(_ style: BackdropStyle) -> some View {
+        Group {
+            if let colors = style == .custom ? [model.customBackdropColor, model.customBackdropColor] : style.colors {
+                Circle().fill(
+                    LinearGradient(
+                        colors: colors.map { Color(nsColor: $0) },
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+            } else {
+                Circle()
+                    .strokeBorder(MM.Colors.border, lineWidth: 1)
+                    .overlay(
+                        Rectangle()
+                            .fill(MM.Colors.textTertiary)
+                            .frame(width: 12, height: 1)
+                            .rotationEffect(.degrees(-45))
+                    )
+            }
+        }
+        .frame(width: 16, height: 16)
+    }
+
+    private func backdropChip(_ style: BackdropStyle) -> some View {
+        Button {
+            withAnimation(MM.Motion.gentle) {
+                model.backdrop = style
+                expandedGroup = nil
+            }
+        } label: {
+            backdropSwatch(style)
+            .overlay(
+                Circle().strokeBorder(
+                    model.backdrop == style ? MM.Colors.textPrimary : .clear, lineWidth: 1.5
+                )
+                .padding(-3)
+            )
+            // The None chip is a hollow ring — without an explicit hit shape
+            // its transparent center ignores clicks entirely.
+            .clickable(minSize: 24)
+        }
+        .buttonStyle(.plain)
+        .help(style == .none ? "No backdrop" : "\(style.rawValue) backdrop")
+    }
+
+    // MARK: Canvas
+
+    private var canvas: some View {
+        GeometryReader { geo in
+            let scale = fitScale(in: geo.size)
+            let displaySize = CGSize(
+                width: model.imageSize.width * scale,
+                height: model.imageSize.height * scale
+            )
+
+            ZStack(alignment: .topLeading) {
+                Color.clear.task(id: geo.size) { zoomPercent = Double(scale * 100) }
+                // Sized to the image (+ padding) — a bare shape is greedy and
+                // would swallow the whole window, stranding small cutouts in
+                // the top-left corner.
+                backdropPreview
+                    .frame(
+                        width: displaySize.width + (model.backdrop == .none ? 0 : 48),
+                        height: displaySize.height + (model.backdrop == .none ? 0 : 48)
+                    )
+
+                // Transparency indicator: a cut-out with no backdrop shows
+                // the classic checkerboard, so "cleared" is visibly cleared.
+                if model.backdrop == .none, model.backgroundRemoved {
+                    Checkerboard()
+                        .frame(width: displaySize.width, height: displaySize.height)
+                        .opacity(0.5)
+                } else if model.backdrop == .none, model.cornerRadius > 0 {
+                    Color.black
+                        .frame(width: displaySize.width, height: displaySize.height)
+                }
+
+                Image(nsImage: model.image)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: displaySize.width, height: displaySize.height)
+                    .clipShape(RoundedRectangle(
+                        cornerRadius: model.effectiveCornerRadius * scale, style: .continuous))
+                    .shadow(color: model.backdrop == .none ? .clear : .black.opacity(0.3),
+                            radius: 12, y: 4)
+                    .padding(model.backdrop == .none ? 0 : 24)
+
+
+                annotationLayer(scale: scale)
+                    .padding(model.backdrop == .none ? 0 : 24)
+
+                Color.clear
+                    .frame(width: displaySize.width, height: displaySize.height)
+                    .contentShape(Rectangle())
+                    .gesture(canvasGesture(scale: scale),
+                             including: tool == .ocr ? .subviews : .all)
+                    .onContinuousHover { phase in
+                        switch phase {
+                        case .active(let location):
+                            let point = CGPoint(x: location.x / scale, y: location.y / scale)
+                            if let selected = selectedAnnotation,
+                               let handle = model.handle(at: point, for: selected, tolerance: 8 / scale) {
+                                Self.resizeCursor(for: handle).set()
+                            } else if tool == .select || model.hitTest(
+                                point, tolerance: 10 / scale, selected: selectedAnnotation) != nil {
+                                if model.hitTest(point, tolerance: 10 / scale,
+                                                 selected: selectedAnnotation) != nil {
+                                    NSCursor.openHand.set()
+                                } else {
+                                    NSCursor.arrow.set()
+                                }
+                            } else {
+                                NSCursor.crosshair.set()
+                            }
+                        case .ended:
+                            NSCursor.arrow.set()
+                        }
+                    }
+                    .padding(model.backdrop == .none ? 0 : 24)
+
+                if tool == .ocr {
+                    LiveTextView(image: model.image)
+                        .frame(width: displaySize.width, height: displaySize.height)
+                        .clipShape(RoundedRectangle(
+                            cornerRadius: model.backdrop == .none ? 0 : 8, style: .continuous))
+                        .padding(model.backdrop == .none ? 0 : 24)
+                        .overlay {
+                            if scanning {
+                                ScanSweep()
+                                    .frame(width: displaySize.width, height: displaySize.height)
+                                    .padding(model.backdrop == .none ? 0 : 24)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                        .transition(.opacity)
+                }
+
+                if let pending = pendingText {
+                    TextField("", text: $textDraft)
+                        .textFieldStyle(.plain)
+                        .font(MM.Fonts.gellix(model.textSize() * scale, .semiBold))
+                        .foregroundStyle(Color(nsColor: model.annotationColor))
+                        .focused($textFocused)
+                        .frame(width: 240)
+                        .offset(
+                            x: pending.origin.x * scale + (model.backdrop == .none ? 0 : 24),
+                            y: pending.origin.y * scale + (model.backdrop == .none ? 0 : 24)
+                        )
+                        .onSubmit(commitText)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+        .frame(minWidth: 560, minHeight: 380)
+    }
+
+    private var backdropPreview: some View {
+        Group {
+            if let colors = model.backdropColors {
+                RoundedRectangle(cornerRadius: MM.Layout.radiusSmall, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: colors.map { Color(nsColor: $0) },
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+            }
+        }
+    }
+
+    private func annotationLayer(scale: CGFloat) -> some View {
+        Canvas { context, _ in
+            for annotation in model.annotations {
+                draw(annotation, in: &context, scale: scale, color: Color(nsColor: model.color(for: annotation)))
+            }
+            // Selection halo — a quiet dashed outline you can grab — and the
+            // handles that resize it. The body still drags; the handles win
+            // only where they sit.
+            if let selected = model.annotations.first(where: { $0.id == selectedAnnotation }) {
+                let b = model.bounds(of: selected)
+                let scaled = CGRect(x: b.origin.x * scale - 5, y: b.origin.y * scale - 5,
+                                    width: b.width * scale + 10, height: b.height * scale + 10)
+                context.stroke(
+                    Path(roundedRect: scaled, cornerRadius: 4),
+                    with: .color(.gray.opacity(0.7)),
+                    style: .init(lineWidth: 1, dash: [4, 3])
+                )
+                for handle in model.handles(for: selected) {
+                    let center = CGPoint(x: handle.point.x * scale, y: handle.point.y * scale)
+                    let knob = Path(ellipseIn: CGRect(x: center.x - 4.5, y: center.y - 4.5, width: 9, height: 9))
+                    context.fill(knob, with: .color(.white))
+                    context.stroke(knob, with: .color(.gray.opacity(0.9)), style: .init(lineWidth: 1))
+                }
+            }
+            // Live preview of the in-flight drag
+            if case .drawing = dragMode, let start = dragStart, let current = dragCurrent {
+                if tool == .crop {
+                    // Dashed keep-region with everything else dimmed.
+                    let r = rect(from: start, to: current)
+                    let scaled = CGRect(x: r.origin.x * scale, y: r.origin.y * scale,
+                                        width: r.width * scale, height: r.height * scale)
+                    var dim = Path(CGRect(origin: .zero, size: CGSize(
+                        width: model.imageSize.width * scale,
+                        height: model.imageSize.height * scale)))
+                    dim.addRect(scaled)
+                    context.fill(dim, with: .color(.black.opacity(0.35)), style: .init(eoFill: true))
+                    context.stroke(Path(scaled), with: .color(.white),
+                                   style: .init(lineWidth: 1.5, dash: [6, 4]))
+                } else if tool != .select && tool != .ocr && tool != .text {
+                    let preview = previewAnnotation(from: start, to: current)
+                    draw(preview, in: &context, scale: scale, color: Color(nsColor: model.color(for: preview)).opacity(0.85))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .frame(
+            width: model.imageSize.width * scale,
+            height: model.imageSize.height * scale
+        )
+    }
+
+    private var annotationColors: [NSColor] {
+        [
+            NSColor(red: 1.0, green: 0.22, blue: 0.36, alpha: 1),
+            .systemOrange, .systemYellow, .systemGreen, .systemBlue, .systemPurple, .white,
+        ]
+    }
+
+    private func draw(_ annotation: Annotation, in context: inout GraphicsContext,
+                      scale: CGFloat, color: Color) {
+        switch annotation {
+        case .arrow(_, let from, let to):
+            let f = CGPoint(x: from.x * scale, y: from.y * scale)
+            let t = CGPoint(x: to.x * scale, y: to.y * scale)
+            var line = Path()
+            let angle = atan2(t.y - f.y, t.x - f.x)
+            let head: CGFloat = 12
+            line.move(to: f)
+            line.addLine(to: CGPoint(x: t.x - cos(angle) * head * 0.6,
+                                     y: t.y - sin(angle) * head * 0.6))
+            context.stroke(line, with: .color(color), style: .init(lineWidth: 3, lineCap: .round))
+            var headPath = Path()
+            headPath.move(to: t)
+            headPath.addLine(to: CGPoint(x: t.x - head * cos(angle - .pi / 7),
+                                         y: t.y - head * sin(angle - .pi / 7)))
+            headPath.addLine(to: CGPoint(x: t.x - head * cos(angle + .pi / 7),
+                                         y: t.y - head * sin(angle + .pi / 7)))
+            headPath.closeSubpath()
+            context.fill(headPath, with: .color(color))
+
+        case .box(_, let rect):
+            let scaled = CGRect(x: rect.origin.x * scale, y: rect.origin.y * scale,
+                                width: rect.width * scale, height: rect.height * scale)
+            context.stroke(
+                Path(roundedRect: scaled, cornerRadius: 3),
+                with: .color(color), style: .init(lineWidth: model.strokeWidth(for: annotation.id) * scale)
+            )
+
+        case .filledBox(_, let rect):
+            let scaled = CGRect(x: rect.origin.x * scale, y: rect.origin.y * scale,
+                                width: rect.width * scale, height: rect.height * scale)
+            context.fill(Path(roundedRect: scaled, cornerRadius: 3), with: .color(color))
+
+        case .ellipse(_, let rect):
+            let scaled = CGRect(x: rect.origin.x * scale, y: rect.origin.y * scale,
+                                width: rect.width * scale, height: rect.height * scale)
+            context.stroke(Path(ellipseIn: scaled), with: .color(color),
+                           style: .init(lineWidth: model.strokeWidth(for: annotation.id) * scale))
+
+        case .line(_, let from, let to):
+            var path = Path()
+            path.move(to: CGPoint(x: from.x * scale, y: from.y * scale))
+            path.addLine(to: CGPoint(x: to.x * scale, y: to.y * scale))
+            context.stroke(path, with: .color(color),
+                           style: .init(lineWidth: model.strokeWidth(for: annotation.id) * scale, lineCap: .round))
+
+        case .pen(_, let points):
+            guard let first = points.first else { break }
+            var path = Path()
+            path.move(to: CGPoint(x: first.x * scale, y: first.y * scale))
+            for p in points.dropFirst() { path.addLine(to: CGPoint(x: p.x * scale, y: p.y * scale)) }
+            context.stroke(path, with: .color(color),
+                           style: .init(lineWidth: model.strokeWidth(for: annotation.id) * scale, lineCap: .round, lineJoin: .round))
+
+        case .counter(_, let center, let number):
+            let radius = model.counterRadius * scale
+            let c = CGPoint(x: center.x * scale, y: center.y * scale)
+            context.fill(Path(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius, width: radius * 2, height: radius * 2)), with: .color(color))
+            context.draw(Text("\(number)").font(MM.Fonts.gellix(radius * 1.2, .semiBold)).foregroundColor(.white), at: c, anchor: .center)
+
+        case .text(let id, let string, let origin):
+            if pendingText?.id == id { break }
+            // Same image-space size the export uses, scaled for display.
+            context.draw(
+                Text(string)
+                    .font(MM.Fonts.gellix(model.textSize(for: id) * scale, .semiBold))
+                    .foregroundColor(color),
+                at: CGPoint(x: origin.x * scale, y: origin.y * scale),
+                anchor: .topLeading
+            )
+
+        case .pixelate(let id, let rect):
+            let scaled = CGRect(x: rect.origin.x * scale, y: rect.origin.y * scale,
+                                width: rect.width * scale, height: rect.height * scale)
+            if let preview = model.pixelatePreviews[id] {
+                context.draw(Image(nsImage: preview), in: scaled)
+            } else {
+                context.fill(Path(scaled), with: .color(.gray.opacity(0.6)))
+            }
+
+        case .highlight(_, let rect):
+            let scaled = CGRect(x: rect.origin.x * scale, y: rect.origin.y * scale,
+                                width: rect.width * scale, height: rect.height * scale)
+            context.drawLayer { layer in
+                layer.blendMode = .multiply
+                layer.fill(Path(scaled), with: .color(color))
+            }
+
+        case .image(let id, let rect):
+            let scaled = CGRect(x: rect.origin.x * scale, y: rect.origin.y * scale,
+                                width: rect.width * scale, height: rect.height * scale)
+            if let overlay = model.overlayImages[id] {
+                context.draw(Image(nsImage: overlay), in: scaled)
+            }
+        }
+    }
+
+    private func addPhoto() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let overlay = NSImage(contentsOf: url) else { return }
+        model.addOverlayImage(overlay)
+        tool = .select
+    }
+
+    // MARK: Gestures
+
+    private func canvasGesture(scale: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                // The gesture lives on a layer that IS the image — divide by
+                // scale and you have image coordinates. No offset math.
+                let point = clampToImage(CGPoint(
+                    x: value.location.x / scale,
+                    y: value.location.y / scale
+                ))
+                let start = CGPoint(
+                    x: value.startLocation.x / scale,
+                    y: value.startLocation.y / scale
+                )
+
+                // Decide once, on the first tick: pressing an existing
+                // annotation moves it; pressing empty canvas draws.
+                if case .undecided = dragMode {
+                    if tool != .ocr, let selected = selectedAnnotation,
+                       let handle = model.handle(at: start, for: selected, tolerance: 8 / scale) {
+                        dragMode = .resizing(selected, handle)
+                    } else if tool != .ocr,
+                       let hit = model.hitTest(start, tolerance: 10 / scale, selected: selectedAnnotation) {
+                        dragMode = .moving(hit, last: start)
+                        selectedAnnotation = hit
+                    } else {
+                        dragMode = .drawing
+                        selectedAnnotation = nil
+                        dragStart = start
+                    }
+                }
+
+                switch dragMode {
+                case .moving(let id, let last):
+                    NSCursor.closedHand.set()
+                    model.move(id, by: CGVector(dx: point.x - last.x, dy: point.y - last.y))
+                    dragMode = .moving(id, last: point)
+                case .resizing(let id, let handle):
+                    Self.resizeCursor(for: handle).set()
+                    model.resize(id, handle: handle, to: point)
+                case .drawing:
+                    dragCurrent = point
+                    if tool == .pen {
+                        if penPoints.isEmpty { penPoints = [start] }
+                        if let last = penPoints.last, hypot(point.x - last.x, point.y - last.y) >= 1.5 / scale { penPoints.append(point) }
+                    }
+                case .undecided:
+                    break
+                }
+            }
+            .onEnded { _ in
+                defer { dragMode = .undecided; dragStart = nil; dragCurrent = nil; penPoints = [] }
+
+                switch dragMode {
+                case .moving(let id, _), .resizing(let id, _):
+                    model.refreshPixelateIfNeeded(id)
+
+                case .drawing:
+                    guard let start = dragStart, let end = dragCurrent else { return }
+                    switch tool {
+                    case .select:
+                        return
+                    case .text:
+                        beginText(at: start)
+                        return
+                    case .crop:
+                        let region = rect(from: start, to: end)
+                        guard region.width > 10, region.height > 10 else { return }
+                        model.applyCrop(region)
+                        selectedAnnotation = nil
+                        tool = .select
+                        return
+                    case .ocr:
+                        return // Live Text owns selection in this mode
+                    case .counter:
+                        // A click, not a drag: drop the next number here.
+                        let badge = previewAnnotation(from: start, to: end)
+                        model.add(badge)
+                        selectedAnnotation = badge.id
+                        return
+                    default:
+                        break
+                    }
+                    let distance = hypot(end.x - start.x, end.y - start.y)
+                    guard distance > 6 else { return }
+                    let annotation = previewAnnotation(from: start, to: end)
+                    model.add(annotation)
+                    selectedAnnotation = annotation.id
+
+                case .undecided:
+                    break
+                }
+            }
+    }
+
+    private func previewAnnotation(from start: CGPoint, to end: CGPoint) -> Annotation {
+        switch tool {
+        case .arrow, .text, .select, .crop, .ocr:
+            return .arrow(id: UUID(), from: start, to: end)
+        case .box:
+            return .box(id: UUID(), rect: rect(from: start, to: end))
+        case .filledBox:
+            return .filledBox(id: UUID(), rect: rect(from: start, to: end))
+        case .ellipse:
+            return .ellipse(id: UUID(), rect: rect(from: start, to: end))
+        case .line:
+            return .line(id: UUID(), from: start, to: end)
+        case .counter:
+            return .counter(id: UUID(), center: start, number: model.nextCounterNumber)
+        case .pen:
+            return .pen(id: UUID(), points: penPoints.isEmpty ? [start, end] : penPoints)
+        case .highlight:
+            return .highlight(id: UUID(), rect: rect(from: start, to: end))
+        case .pixelate:
+            return .pixelate(id: UUID(), rect: rect(from: start, to: end))
+        }
+    }
+
+    private static func resizeCursor(for handle: EditorModel.ResizeHandle) -> NSCursor {
+        if handle.isHorizontal { return .resizeLeftRight }
+        if handle.isVertical { return .resizeUpDown }
+        return .crosshair
+    }
+
+    private func rect(from a: CGPoint, to b: CGPoint) -> CGRect {
+        CGRect(x: min(a.x, b.x), y: min(a.y, b.y),
+               width: abs(b.x - a.x), height: abs(b.y - a.y))
+    }
+
+    private func clampToImage(_ p: CGPoint) -> CGPoint {
+        CGPoint(x: min(max(0, p.x), model.imageSize.width),
+                y: min(max(0, p.y), model.imageSize.height))
+    }
+
+    private func fitScale(in available: CGSize) -> CGFloat {
+        let inset: CGFloat = model.backdrop == .none ? 0 : 48
+        let w = (available.width - inset) / model.imageSize.width
+        let h = (available.height - inset) / model.imageSize.height
+        return max(0.05, min(min(w, h), 1))
+    }
+
+    // MARK: Text tool
+
+    private func beginText(at origin: CGPoint) {
+        commitText()
+        let id = UUID()
+        pendingText = (origin, id)
+        textDraft = ""
+        textFocused = true
+    }
+
+    private func commitText() {
+        guard let pending = pendingText else { return }
+        let trimmed = textDraft.trimmingCharacters(in: .whitespaces)
+        if !trimmed.isEmpty {
+            let annotation = Annotation.text(id: pending.id, string: trimmed, origin: pending.origin)
+            model.add(annotation)
+            selectedAnnotation = annotation.id
+            // Hand back the pointer so the fresh text can be dragged into place.
+            withAnimation(MM.Motion.gentle) { tool = .select }
+        }
+        pendingText = nil
+        textDraft = ""
+    }
+
+    private func cancelText() {
+        pendingText = nil
+        textDraft = ""
+    }
+}
+
+/// One-shot scan sweep when Live Text activates — the "it's reading the
+/// image" moment.
+private struct ScanSweep: View {
+    @State private var offset: CGFloat = -0.15
+
+    var body: some View {
+        GeometryReader { geo in
+            LinearGradient(
+                colors: [.clear, Color.accentColor.opacity(0.35), .clear],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: geo.size.height * 0.22)
+            .offset(y: geo.size.height * offset)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.7)) { offset = 1.0 }
+            }
+        }
+        .clipped()
+    }
+}
+
+private struct Checkerboard: View {
+    var body: some View {
+        Canvas { context, size in
+            let cell: CGFloat = 10
+            for row in 0...Int(size.height / cell) {
+                for col in 0...Int(size.width / cell) where (row + col).isMultiple(of: 2) {
+                    context.fill(
+                        Path(CGRect(x: CGFloat(col) * cell, y: CGFloat(row) * cell,
+                                    width: cell, height: cell)),
+                        with: .color(.gray.opacity(0.25))
+                    )
+                }
+            }
+        }
+    }
+}
