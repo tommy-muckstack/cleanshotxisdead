@@ -13,7 +13,7 @@ export async function withApp(slug, fn, { port = 3100 + Math.floor(Math.random()
 export async function demoPage(browser, base, { w = 1440, h = 900, scale = 1 } = {}) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: scale, acceptDownloads: true });
   const page = await ctx.newPage();
-  await page.goto(base + "/login"); await page.getByRole("button", { name: "Use the demo account" }).click(); await page.waitForURL(/\/app/);
+  await page.goto(base + "/app"); await page.waitForURL(/\/app/);
   return { ctx, page };
 }
 export const out = (app) => { const d = `/workspace/isdead-shots/${app}`; fs.mkdirSync(d, { recursive: true }); return d; };

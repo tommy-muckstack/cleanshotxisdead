@@ -1,0 +1,93 @@
+import AppKit
+@preconcurrency import Vision
+
+/// On-device Vision analysis: OCR text + scene labels, combined into the
+/// searchable text that lands in the shared index.
+enum ImageAnalysis {
+    /// One recognized text line and its Vision-normalized bounding box
+    /// (bottom-left origin, 0...1).
+    struct TextObservation: Identifiable, Codable {
+        var id = UUID()
+        let text: String
+        let box: CGRect
+        var words: [TextObservation]? = nil
+
+        /// Convert to image coordinates (points, top-left origin).
+        func rect(in imageSize: CGSize) -> CGRect {
+            CGRect(
+                x: box.minX * imageSize.width,
+                y: (1 - box.maxY) * imageSize.height,
+                width: box.width * imageSize.width,
+                height: box.height * imageSize.height
+            )
+        }
+    }
+
+    /// Line-level OCR with geometry — powers the editor's text-selection tool.
+    static func textObservations(_ image: NSImage) async -> [TextObservation] {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return []
+        }
+        return await withCheckedContinuation { continuation in
+            nonisolated(unsafe) let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            DispatchQueue.global(qos: .userInitiated).async {
+                try? handler.perform([request])
+                let observations = (request.results ?? []).compactMap { observation -> TextObservation? in
+                    guard let recognized = observation.topCandidates(1).first else { return nil }
+                    let text = recognized.string
+                    var words: [TextObservation] = []
+                    // Whitespace-delimited tokens retain prices, email and code
+                    // punctuation. Vision supplies geometry, never width guesses.
+                    for word in text.split(whereSeparator: { $0.isWhitespace }) {
+                        let range = word.startIndex..<word.endIndex
+                        if let box = try? recognized.boundingBox(for: range)?.boundingBox {
+                            words.append(TextObservation(text: String(text[range]), box: box))
+                        }
+                    }
+                    return TextObservation(text: text, box: observation.boundingBox, words: words)
+                }
+                continuation.resume(returning: observations)
+            }
+        }
+    }
+
+    struct Result {
+        let text: String
+        let labels: [String]
+        var observations: [TextObservation] = []
+
+        var searchableText: String {
+            [text, labels.joined(separator: " ")]
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+        }
+    }
+
+    static func analyze(_ image: NSImage) async -> Result {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return Result(text: "", labels: [])
+        }
+        async let observations = textObservations(image)
+        async let labels = classify(cgImage)
+        let lines = await observations
+        return await Result(text: lines.map(\.text).joined(separator: "\n"), labels: labels, observations: lines)
+    }
+
+    private static func classify(_ image: CGImage) async -> [String] {
+        await withCheckedContinuation { continuation in
+            nonisolated(unsafe) let request = VNClassifyImageRequest()
+            let handler = VNImageRequestHandler(cgImage: image, options: [:])
+            DispatchQueue.global(qos: .utility).async {
+                try? handler.perform([request])
+                let labels = (request.results ?? [])
+                    .filter { $0.confidence > 0.5 }
+                    .prefix(10)
+                    .map { $0.identifier.lowercased() }
+                continuation.resume(returning: Array(labels))
+            }
+        }
+    }
+}

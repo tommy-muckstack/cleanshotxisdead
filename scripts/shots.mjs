@@ -13,7 +13,7 @@ await withApp("cleanshotxisdead", async ({ base }) => {
   const browser = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--auto-select-desktop-capture-source=Entire screen", "--enable-usermedia-screen-capturing"] });
   try {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true, permissions: ["clipboard-read", "clipboard-write"] }); const page = await ctx.newPage();
-    await page.goto(base + "/login"); await page.getByRole("button", { name: "Use the demo account" }).click(); await page.waitForURL(/\/app/);
+    await page.goto(base + "/app"); await page.waitForURL(/\/app/);
     await page.getByTestId("empty").waitFor(); await page.screenshot({ path: `${dir}/library-empty.png` });
     // open-file path + paste path
     await page.getByLabel("Open image").setInputFiles({ name: "tiny.png", mimeType: "image/png", buffer: TINY }); await page.waitForURL(/\/app\/edit\//); await page.waitForFunction(() => document.querySelector("[data-testid=canvas]")?.width === 1); assert.deepEqual(await size(page), [1, 1]); await page.getByLabel("Capture name").waitFor(); assert.equal(await page.getByLabel("Capture name").inputValue(), "tiny");
@@ -69,7 +69,7 @@ await withApp("cleanshotxisdead", async ({ base }) => {
     const rec = await ctx.newPage(); await rec.goto(base + "/app"); await rec.getByTestId("items").waitFor(); let recorded = "skipped";
     try { await rec.getByRole("button", { name: "● Record screen" }).click(); await rec.getByTestId("stop-rec").waitFor({ timeout: 4000 }); await rec.waitForTimeout(2500); await rec.getByTestId("stop-rec").click(); await rec.locator('[data-kind="video"]').waitFor({ timeout: 6000 }); recorded = "ok"; } catch { /* no display capture in this environment */ }
     console.log("screen recording:", recorded);
-    // marketing + login
+    // marketing
     const m = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage(); await m.goto(base + "/app"); await m.waitForURL(/\/login/);
     await m.goto(base); await m.waitForTimeout(500); await m.screenshot({ path: `${dir}/home-top.png` }); await m.screenshot({ path: `${dir}/home-full.png`, fullPage: true });
     await m.goto(base + "/#pricing"); await m.waitForTimeout(300); await m.screenshot({ path: `${dir}/home-pricing.png` }); await m.goto(base + "/login"); await m.waitForTimeout(300); await m.screenshot({ path: `${dir}/login.png` });

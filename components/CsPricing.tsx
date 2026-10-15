@@ -19,11 +19,11 @@ export function CsPricing() {
     <div className="pc a"><div className="band">One-time payment</div>
       <div className="in"><h3>CleanShotX Basic</h3><div className="pp"><b>$35</b><small>Pay once, use forever.</small></div>
         <div className="f"><Ic />Mac app</div><div className="f"><Ic />One year of updates</div><div className="f"><Ic />Cloud</div><div className="f s"><Ic />1 GB storage</div>
-        <p className="st">Are you a student or PixelSnap 2 user?<br /><a>Get a discount ›</a></p><Link href="/login" className="bb">Buy now</Link></div></div>
+        <p className="st">Are you a student or PixelSnap 2 user?<br /><a>Get a discount ›</a></p><Link href="/download" className="bb">Download free</Link></div></div>
     <div className="pc b"><div className="band">For teams and power users</div>
       <div className="in"><h3>CleanShotX Pro <span className="tg"><u>Yearly -17%</u><u className="o">Monthly</u></span></h3><div className="pp"><b>$10</b><small>per user/mo, billed annually</small></div>
         <div className="f"><Ic />Mac app</div><div className="f"><Ic />Always up to date</div><div className="f"><Ic />Cloud</div><div className="f s"><Ic />Unlimited storage</div><div className="f s"><Ic />Custom domain and branding</div><div className="f s"><Ic />Advanced sharing and security</div><div className="f"><Ic />Team</div><div className="f s"><Ic />Centralized access management</div><div className="f s"><Ic />SSO and SCIM</div>
-        <Link href="/login" className="bb" style={{ top: 539 }}>Start a subscription</Link></div></div>
+        <Link href="/download" className="bb" style={{ top: 539 }}>Download free</Link></div></div>
     <p className="pn" style={{ top: 1130 }}>Prices in USD. Taxes may apply at checkout. The app requires macOS 13.0 or newer.</p>
     <p className="pn" style={{ top: 1160 }}>Cloud plans are subject to our fair use policy.</p>
     <div className="mb"><CsMark s={46} /><div><b>30-Day Money-Back Guarantee</b><span>Try it risk-free. If it&apos;s not the right fit, just let us know.</span></div><div className="rr"><b>4.9</b> <i>★★★★★</i> <small>Based on user reviews</small></div></div>

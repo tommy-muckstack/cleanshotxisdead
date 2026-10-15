@@ -8,7 +8,7 @@ export const CsMark = ({ s = 30 }: { s?: number }) => <Mark size={s} />;
 export function CsNav() {
   return <header className="cs-nav"><Link href="/" className="lg"><CsMark /><b>CleanShotX</b></Link>
     <nav><a>Product <i>⌄</i></a><Link href="/pricing">Pricing</Link><a>License Manager</a><a>Support <i>⌄</i></a></nav>
-    <Link href="/login" className="li">Log in</Link><Link href="/login" className="bn">Buy now</Link></header>;
+    <Link href="/download" className="bn">Download</Link></header>;
 }
 const FC: [string, string[]][] = [["Product", ["All Features", "Changelog", "Testimonials", "Affiliate Program", "Available discounts", "URL scheme API"]], ["CleanShotX Cloud", ["About CleanShotX Cloud", "Log in to Cloud", "Security", "Terms of Service", "Privacy Policy", "Bug Bounty"]], ["License", ["Pricing", "License Manager", "Buy additional seats", "EULA", "Download"]], ["Support", ["Contact us", "FAQ", "Press kit", "Status Page", "YouTube"]]];
 export function CsDark({ top }: { top: number }) {
@@ -16,7 +16,7 @@ export function CsDark({ top }: { top: number }) {
     <span className="app"><CsMark s={90} /></span>
     <h2>Upgrade your Mac screen<br />capture workflow today.</h2>
     <p className="sb">Try CleanShotX risk-free with our 30-day money-back guarantee.</p>
-    <Link href="/login" className="gb">Get CleanShot X for Mac</Link>
+    <Link href="/download" className="gb">Get CleanShotX for Mac</Link>
     <hr />
     <div className="nl"><b>Stay in the loop</b><span>New features, product news, and occasional deals. No spam.</span></div>
     <div className="em"><i>Your email</i><u>Subscribe</u><small>By subscribing, you agree to receive marketing emails from this app. You can unsubscribe anytime. See our Privacy policy.</small></div>
@@ -48,7 +48,7 @@ export function CsHome() {
     <a className="intro">▷ Introducing Studio Mode</a>
     <h1 className="h1"><span>There are average capture apps.</span><br /><span>And there&apos;s CleanShotX.</span></h1>
     <p className="lede">The Mac-native toolkit for screenshots, recordings and collaboration. Trusted by 250,000+ users.</p>
-    <Link href="/login" className="b1">Get CleanShotX for Mac</Link><a className="b2">▷ How it works</a>
+    <Link href="/download" className="b1">Get CleanShotX for Mac</Link><a className="b2">▷ How it works</a>
     <a className="gu">30-Day Money-Back Guarantee ›</a>
     <div className="vid"><span className="pl">▶</span></div>
     <div className="tq"><p>This is an exceptionally well executed product. Quickly turned into my screenshot tool of choice. Bravo.</p><div className="who"><i /><b>Jason Fried<br /><small>Basecamp</small></b></div><span className="ar"><u>←</u><u>→</u></span></div>

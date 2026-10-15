@@ -5,3 +5,9 @@ next-env.d.ts
 .env*.local
 .data
 test-results
+
+# Mac app
+mac/.build/
+mac/.vercel/
+mac/secrets.env
+mac/.swiftpm/
