@@ -13,6 +13,7 @@ function Mesh({ m, w, h }: { m: { gx: number; gy: number; c: string[] }; w: numb
 export type Measured = { H: number; bg?: string; items: Item[] };
 const CHECK = '<svg viewBox="0 0 20 20" width="100%" height="100%" fill="none" stroke="#121317" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.5"/><path d="M6.8 10.2l2.2 2.2 4.2-4.6"/></svg>';
 const CTA = /get|buy|log ?in|sign|start|subscribe|download|try|contact/i;
+const WEB_APP = /open the web app/i;
 
 export function MeasuredPage({ data, className = "", skip, img, display, bgFallback = "linear-gradient(180deg,#dbe8ff,#f5f8ff 60%,#fff)" }: { data: Measured; className?: string; skip?: (i: Item) => boolean; img?: (i: Item, style: React.CSSProperties) => React.ReactNode; display?: RegExp; bgFallback?: string | ((i: Item) => string) }) {
   const items = data.items.filter(i => !(skip && skip(i)));
@@ -25,7 +26,7 @@ export function MeasuredPage({ data, className = "", skip, img, display, bgFallb
       if (it.k === "img" && img) { const r = img(it, pos); if (r) return <div key={i} style={{ position: "absolute", ...pos }}>{r}</div>; }
       if (it.k === "img") return it.w <= 20 ? <div key={i} className="mp-i" style={pos} dangerouslySetInnerHTML={{ __html: CHECK }} /> : <div key={i} className="mp-ph" style={{ ...pos, background: it.wash, borderRadius: it.r || (it.w < 130 ? "16px" : "12px") }}>{it.mesh && it.w >= 90 && <Mesh m={it.mesh} w={it.w} h={it.h} />}</div>;
       const style = { left: it.x, top: it.y, minWidth: it.w, height: it.h, zIndex: it.z ?? 3, fontSize: it.fs, lineHeight: it.lh, fontWeight: it.fw, color: it.c, letterSpacing: it.ls, textDecoration: it.td, fontStyle: it.fi ? "italic" : undefined, fontFamily: display && it.ff && display.test(it.ff) ? "var(--ids-font-display)" : undefined } as React.CSSProperties;
-      return it.href ? <Link key={i} href={CTA.test(it.t || "") ? "/download" : "/"} className="mp-t" data-w={it.w} style={style}>{it.t}</Link> : <span key={i} className="mp-t" data-w={it.w} style={style}>{it.t}</span>;
+      return it.href ? <Link key={i} href={WEB_APP.test(it.t || "") ? "/app" : CTA.test(it.t || "") ? "/download" : "/"} className="mp-t" data-w={it.w} style={style}>{it.t}</Link> : <span key={i} className="mp-t" data-w={it.w} style={style}>{it.t}</span>;
     })}
   </div>;
 }
