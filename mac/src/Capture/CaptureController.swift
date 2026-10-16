@@ -178,7 +178,8 @@ final class CaptureController: SelectionOverlayDelegate {
         if s.afterRecCopy { CaptureActions.copyFile(entry.fileURL) }
         if s.afterRecSave { CaptureActions.saveToExportLocation(entry, quiet: true) }
         if s.afterRecUpload { Task { await CloudUploader.shared.upload(entry) } }
-        if s.afterRecOverlay { QuickAccessOverlay.shared.add(entry, image: entry.fileURL.movieThumbnail()) }
+        let thumb = url.pathExtension == "gif" ? (NSImage(contentsOf: url) ?? url.movieThumbnail()) : url.movieThumbnail()
+        if s.afterRecOverlay { QuickAccessOverlay.shared.add(entry, image: thumb) }
         Analytics.track("app_recording_saved", ["format": url.pathExtension])
     }
 
