@@ -21,7 +21,11 @@ final class SettingsWindowController {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 670, height: 640), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false; window.center()
         window.appearance = NSAppearance(named: .darkAqua)
-        window.contentView = NSHostingView(rootView: SettingsView(tabs: model))
+        let host = NSHostingView(rootView: SettingsView(tabs: model))
+        host.translatesAutoresizingMaskIntoConstraints = true; host.autoresizingMask = [.width, .height]
+        host.sizingOptions = []
+        window.contentView = host
+        window.setContentSize(NSSize(width: 670, height: 640))
         window.title = "General"
         model.onChange = { [weak self] in self?.window.title = $0.title }
     }
