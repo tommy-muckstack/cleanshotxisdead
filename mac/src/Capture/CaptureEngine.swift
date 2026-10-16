@@ -180,6 +180,7 @@ final class CaptureEngine: ObservableObject {
             let config = SCStreamConfiguration()
             config.width = display.pixelWidth
             config.height = display.pixelHeight
+            config.showsCursor = await MainActor.run { SettingsStore.shared.showCursorOnScreenshots }
             let image = try await SCScreenshotManager.captureImage(
                 contentFilter: filter, configuration: config
             )

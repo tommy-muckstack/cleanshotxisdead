@@ -148,7 +148,7 @@ final class RecordingControls {
 final class RecordingChooser {
     private let panel: NSPanel
     init(recorder: ScreenRecorder, region: CGRect) {
-        panel = NSPanel(contentRect: NSRect(x: region.midX - 220, y: max(region.minY - 60, 8), width: 440, height: 48), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel = NSPanel(contentRect: NSRect(x: region.midX - 250, y: max(region.minY - 60, 8), width: 500, height: 48), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isFloatingPanel = true; panel.level = .screenSaver; panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true; panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.contentView = NSHostingView(rootView: ChooserView(recorder: recorder))
@@ -168,11 +168,11 @@ final class RecordingChooser {
                 seg("photo.on.rectangle", "GIF", recorder.mode == .gif) { recorder.mode = .gif }
                 Divider().frame(height: 20).overlay(Color.white.opacity(0.2))
                 tog("mic", "Microphone", $s.recordMicrophone)
-                tog("speaker.wave.2", "Computer audio", $s.recordComputerAudio)
+                tog("speaker.wave.2", "Computer audio", $s.recordComputerAudio, offSymbol: "speaker.slash")
                 Spacer()
                 Button { recorder.cancelChooser() } label: { Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(.white).frame(width: 26, height: 26) }.buttonStyle(.plain)
                 Button { recorder.begin() } label: {
-                    HStack(spacing: 6) { Circle().fill(Color.red).frame(width: 8, height: 8); Text(recorder.mode == .gif ? "Start GIF Recording" : "Start Recording").font(.system(size: 12, weight: .semibold)) }
+                    HStack(spacing: 6) { Circle().fill(Color.red).frame(width: 8, height: 8); Text(recorder.mode == .gif ? "Start GIF Recording" : "Start Recording").font(.system(size: 12, weight: .semibold)).lineLimit(1).fixedSize() }
                         .foregroundStyle(.white).padding(.horizontal, 12).frame(height: 30).background(RoundedRectangle(cornerRadius: 8).fill(Color(red: 0.16, green: 0.42, blue: 1)))
                 }.buttonStyle(.plain)
             }
@@ -182,8 +182,8 @@ final class RecordingChooser {
         private func seg(_ symbol: String, _ title: String, _ on: Bool, _ run: @escaping () -> Void) -> some View {
             Button(action: run) { HStack(spacing: 5) { Image(systemName: symbol); Text(title) }.font(.system(size: 12, weight: .medium)).foregroundStyle(.white).padding(.horizontal, 10).frame(height: 30).background(RoundedRectangle(cornerRadius: 8).fill(on ? Color.white.opacity(0.22) : .clear)) }.buttonStyle(.plain)
         }
-        private func tog(_ symbol: String, _ help: String, _ b: Binding<Bool>) -> some View {
-            Button { b.wrappedValue.toggle() } label: { Image(systemName: b.wrappedValue ? symbol : symbol + ".slash").font(.system(size: 13, weight: .medium)).foregroundStyle(b.wrappedValue ? .white : .white.opacity(0.45)).frame(width: 30, height: 30).background(RoundedRectangle(cornerRadius: 8).fill(b.wrappedValue ? Color.white.opacity(0.18) : .clear)) }.buttonStyle(.plain).help(help)
+        private func tog(_ symbol: String, _ help: String, _ b: Binding<Bool>, offSymbol: String? = nil) -> some View {
+            Button { b.wrappedValue.toggle() } label: { Image(systemName: b.wrappedValue ? symbol : (offSymbol ?? symbol + ".slash")).font(.system(size: 13, weight: .medium)).foregroundStyle(b.wrappedValue ? .white : .white.opacity(0.45)).frame(width: 30, height: 30).background(RoundedRectangle(cornerRadius: 8).fill(b.wrappedValue ? Color.white.opacity(0.18) : .clear)) }.buttonStyle(.plain).help(help)
         }
     }
 }
