@@ -10,6 +10,7 @@ final class HistoryWindowController {
         window.contentMinSize = NSSize(width: 560, height: 360)
         let host = NSHostingView(rootView: HistoryView().frame(minWidth: 560, idealWidth: 820, minHeight: 360, idealHeight: 560))
         host.translatesAutoresizingMaskIntoConstraints = true; host.autoresizingMask = [.width, .height]
+        host.sizingOptions = []
         host.frame = NSRect(origin: .zero, size: NSSize(width: 820, height: 560))
         window.contentView = host
         window.setContentSize(NSSize(width: 820, height: 560)); window.center()

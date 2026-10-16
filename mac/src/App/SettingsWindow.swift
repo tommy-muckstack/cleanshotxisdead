@@ -23,6 +23,7 @@ final class SettingsWindowController {
         window.appearance = NSAppearance(named: .darkAqua)
         let host = NSHostingView(rootView: SettingsView(tabs: model))
         host.translatesAutoresizingMaskIntoConstraints = true; host.autoresizingMask = [.width, .height]
+        host.sizingOptions = []
         window.contentView = host
         window.setContentSize(NSSize(width: 670, height: 640))
         window.title = "General"
