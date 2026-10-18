@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { BP } from "@/lib/basepath";
+import { track, EVENTS } from "@/lib/analytics";
 import { getItem, putItem } from "@/lib/shot/db";
 import { COLORS, emptyDoc, PRESETS, type Ann, type Doc, type Item, type Tool } from "@/lib/shot/types";
 import { clampCrop, moveAnn, nextStep, normRect, renumber, rid, topHit, bounds } from "@/lib/shot/geometry";
@@ -60,9 +61,9 @@ export function Editor({ userId, itemId }: { userId: string; itemId: string }) {
   const commitText = () => { if (textEdit && textEdit.value.trim()) commit({ ...doc, anns: [...doc.anns, { id: rid(), type: "text", x1: textEdit.x, y1: textEdit.y, x2: textEdit.x, y2: textEdit.y, color, width: Math.max(2, Math.min(width, 8)), text: textEdit.value.trim() }] }); setTextEdit(null); };
   const exportBlob = async () => canvasToBlob(renderOutput(img.current!, item!.w, item!.h, doc));
   const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(""), 2200); };
-  const download = async () => { const b = await exportBlob(); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${(item!.name || "screenshot").replace(/[^\w.-]+/g, "-")}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); flash("Downloaded"); };
-  const copy = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "image/png": await exportBlob() })]); flash("Copied to clipboard"); } catch { flash("Clipboard not available here. Use Download."); } };
-  const upload = async () => { setBusy("upload"); try { const fd = new FormData(); fd.set("file", await exportBlob(), "shot.png"); fd.set("name", item!.name); const r = await fetch(`${BP}/api/shots`, { method: "POST", body: fd }); const j = await r.json(); if (!r.ok) { flash(j.error ?? "Upload failed"); return; } const full = `${location.origin}${BP}${j.url}`; setLink(full); const next = { ...item!, cloudId: j.shot.id, doc }; setItem(next); await putItem(userId, next); } finally { setBusy(""); } };
+  const download = async () => { const b = await exportBlob(); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `${(item!.name || "screenshot").replace(/[^\w.-]+/g, "-")}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); flash("Downloaded"); track(EVENTS.app_editor_exported, { mode: "download", annotations: doc.anns.length }); };
+  const copy = async () => { try { await navigator.clipboard.write([new ClipboardItem({ "image/png": await exportBlob() })]); flash("Copied to clipboard"); track(EVENTS.app_editor_exported, { mode: "copy", annotations: doc.anns.length }); } catch { flash("Clipboard not available here. Use Download."); } };
+  const upload = async () => { setBusy("upload"); try { const fd = new FormData(); fd.set("file", await exportBlob(), "shot.png"); fd.set("name", item!.name); const r = await fetch(`${BP}/api/shots`, { method: "POST", body: fd }); const j = await r.json(); if (!r.ok) { flash(j.error ?? "Upload failed"); return; } const full = `${location.origin}${BP}${j.url}`; setLink(full); track(EVENTS.app_shared, { channel: "cloud", annotations: doc.anns.length }); const next = { ...item!, cloudId: j.shot.id, doc }; setItem(next); await putItem(userId, next); } finally { setBusy(""); } };
   const sorted = useMemo(() => TOOLS, []); const selAnn = doc.anns.find(a => a.id === sel);
   const setBg = (p: Partial<Doc["bg"]>) => commit({ ...doc, bg: { ...doc.bg, ...p } });
   if (item === undefined) return <p className="ids-muted" style={{ padding: 24 }}>Loading…</p>;
